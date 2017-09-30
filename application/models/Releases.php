@@ -7,17 +7,29 @@ class Releases extends MY_Model {
 
 	protected function setRelations() {
 		$this->addRelation(array(
-			'primary'   => 'series_id',      
-			'table'     => 'series', 
+			'primary'   => 'series_id',
+			'table'     => 'series',
 			'foreign'   => 'id',
 			'variable'  => 'serie'
 		));
 
-        $this->addRelation(array(
-			'primary'   => 'id',      
-			'table'     => 'release_groups', 
+		$this->addRelation(array(
+			'primary'   => 'id',
+			'table'     => 'release_groups',
 			'foreign'   => 'release_id',
 			'variable'  => 'groups'
 		));
+	}
+
+	public function getGroups($groups) {
+		$groupsArray = array();
+		foreach($groups as $key => $value) {
+			$value->name = $this->scans->find($value->group_id)->name;
+			unset($value->release_id);
+			array_push($groupsArray, $value);
+		}
+
+
+		return $groupsArray;
 	}
 }

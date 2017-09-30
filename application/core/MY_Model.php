@@ -34,7 +34,7 @@ class MY_Model extends Pagination {
     * Temporary array for returning
     * @var array
     */
-   protected   $data = array();	
+   protected   $data = array();
 
    /**
     * True, if relational data is being called
@@ -89,7 +89,7 @@ class MY_Model extends Pagination {
      */
     public function rawQuery($query, $type = 'object') {
       if($type == 'array') {
-        return $this->db->query($query)->result_array();  
+        return $this->db->query($query)->result_array();
       }
       return $this->db->query($query)->result();
     }
@@ -104,7 +104,7 @@ class MY_Model extends Pagination {
     }
 
     /**
-     * count of all rows present in table 
+     * count of all rows present in table
      * @return integer
      */
     public function countAll() {
@@ -113,7 +113,7 @@ class MY_Model extends Pagination {
 
 
     /**
-     * get all rows present in table 
+     * get all rows present in table
      * @return array
      */
     public function getAll() {
@@ -127,7 +127,9 @@ class MY_Model extends Pagination {
      * @return aray or boolean
      */
     public function getWhere($conditions) {
-      if(is_array($conditions)) {
+      if (is_array($conditions) && $this->getRelation) {
+        return $this->filterResults($this->db->get_where($this->table, $conditions)->result());
+      } else if(is_array($conditions)) {
         return $this->db->get_where($this->table, $conditions)->result();
       }
       return false;
@@ -149,7 +151,7 @@ class MY_Model extends Pagination {
            } else {
             return $query->result();
            }
-        } 
+        }
       }
       return $this->data;
     }
@@ -167,7 +169,7 @@ class MY_Model extends Pagination {
         } else {
     		  return $this->filterResults($this->db->get_where($this->table, array($this->primaryKey => $id))->row());
         }
-        
+
     	} else if($id) {
         if(is_array($id)) {
           return $this->db->get_where($this->table, $id)->row();
@@ -293,7 +295,7 @@ class MY_Model extends Pagination {
           $IDsArray = $this->getIDsArray($conditions);
           $this->db->where_in($this->primaryKey, $IDsArray);
           return $this->db->delete($this->table);
-        } 
+        }
       }
       return false;
     }
@@ -309,7 +311,7 @@ class MY_Model extends Pagination {
         if(is_array($IDs)) {
           $this->db->where_in($this->primaryKey, $IDs);
           return $this->db->delete($this->table);
-        } 
+        }
       }
       return false;
     }
@@ -447,9 +449,9 @@ class MY_Model extends Pagination {
       }
 
       return $IDs;
-    } 
+    }
 
-   
+
    /**
     * For adding relation to database table
     * @param array $relation
@@ -458,7 +460,7 @@ class MY_Model extends Pagination {
         if(sizeof($relation) > 0) {
           $this->relations[] = $relation;
         }
-    } 
+    }
 
 
     /**
@@ -471,7 +473,7 @@ class MY_Model extends Pagination {
             $this->relations[] = $relation;
           }
         }
-    } 
+    }
 
 
     /**
@@ -531,7 +533,7 @@ class MY_Model extends Pagination {
           else if($type == 'array') {
            if(isset($res[$hide])) {
               unset($res[$hide]);
-            }  
+            }
           }
         }
 
@@ -613,7 +615,7 @@ class MY_Model extends Pagination {
               }
             }
           }
-          
+
         }
 
         return $result;
@@ -633,7 +635,7 @@ class MY_Model extends Pagination {
 
       $result = new stdClass();
       if($this->resultType == 'array') {
-        $result = array();  
+        $result = array();
       }
       if($column != '') {
         $result = '';
@@ -676,9 +678,9 @@ class MY_Model extends Pagination {
 
     /**
      * Get the column value based on type
-     * @param  object $row    
-     * @param  string $column 
-     * @return string $column 
+     * @param  object $row
+     * @param  string $column
+     * @return string $column
      */
     protected function getColumnValue($row, $column) {
 
