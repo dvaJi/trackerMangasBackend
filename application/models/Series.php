@@ -78,7 +78,8 @@ class Series extends MY_Model {
 		foreach ($staff as $key => $value) {
 			$value->id = $value->id_staff;
 			$elstaff = $this->staff->find($value->id);
-			$value->name = $elstaff->name;
+			$conditions = array('id_staff' => $value->id, 'def' => 1);
+			$value->name = $this->staffaltnames->find($conditions)->name;
 			$value->image = ($elstaff->image != NULL || $elstaff->image != '') ? $elstaff->image:'default.png';
 			$value->stub = $elstaff->stub;
 			$value->rol = $this->roles->find($value->id_roles)->name;
@@ -258,14 +259,14 @@ class Series extends MY_Model {
 		$coversArray = array();
 		for ($i = 1; $i < 5; $i++) {
 			$coverObj = new \stdClass;
-			$coverObj->id_series = $serie->id;
-			$coverObj->filename = $this->getTypeCovers($i) . $cover->filename;
+			$coverObj->id_staff = $staff->id;
+			$coverObj->filename = $this->getTypeCovers($i) . (($i != 1)? "_":"") . $cover->filename;
 			$coverObj->type = $i;
 			$coverObj->adult = 0;
-			$coverObj->height = ($i === 1) ? $imagedata["1"] : $image_sizes[$i-2][0];
-			$coverObj->width = ($i === 1) ? $imagedata["0"] : $image_sizes[$i-2][1];
+			$coverObj->height = ($i === 1) ? $imagedata["1"] : $image_sizes[$this->getTypeCovers($i)][0];
+			$coverObj->width = ($i === 1) ? $imagedata["0"] : $image_sizes[$this->getTypeCovers($i)][1];
 			$coverObj->mime = image_type_to_mime_type($imagedata["2"]);
-			$coverObj->size = filesize($coverObj->filename);
+			$coverObj->size = filesize($dir . $coverObj->filename);
 			$coverObj->created = date("Y-m-d H:i:s");
 			$coverObj->updated = date("Y-m-d H:i:s");
 
@@ -310,13 +311,13 @@ class Series extends MY_Model {
 			return "";
 
 		} else if ($type == 2) {
-			return "large_";
+			return "large";
 
 		} else if ($type == 3) {
-			return "medium_";
+			return "medium";
 
 		} else if ($type == 4) {
-			return "thumb_";
+			return "thumb";
 		}
 	}
 

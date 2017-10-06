@@ -117,7 +117,11 @@ class MY_Model extends Pagination {
      * @return array
      */
     public function getAll() {
-      return $this->db->select('*')->from($this->table)->get()->result();
+      if ($this->getRelation) {
+        return $this->filterResults($this->db->select('*')->from($this->table)->get()->result());
+      } else {
+        return $this->db->select('*')->from($this->table)->get()->result();
+      }
     }
 
 
