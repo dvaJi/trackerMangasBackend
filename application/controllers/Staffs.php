@@ -63,7 +63,6 @@ class Staffs extends REST_Controller {
       // Covers
       if (isset($data->cover) && $data->cover != NULL) {
         $covers = $this->staff->uploadCover($staff, $data->cover);
-        var_dump($covers);
         $this->staffcovers->insertBatch($covers);
       }
 

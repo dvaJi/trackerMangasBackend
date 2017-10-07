@@ -51,9 +51,9 @@ class Series extends MY_Model {
 	}
 
 	/*
-	 * Reemplaza los id por los nombres de cada género y quita propiedades innecesarias.
-	 *
-	 * @autor dvaJi
+	* Reemplaza los id por los nombres de cada género y quita propiedades innecesarias.
+	*
+	* @autor dvaJi
 	*/
 	public function getGenres($genres) {
 		$genresArray = array();
@@ -69,9 +69,9 @@ class Series extends MY_Model {
 	}
 
 	/*
-	 * Reemplaza los id por los nombres de cada staff, el rol, imagen, y quita propiedades innecesarias.
-	 *
-	 * @autor dvaJi
+	* Reemplaza los id por los nombres de cada staff, el rol, imagen, y quita propiedades innecesarias.
+	*
+	* @autor dvaJi
 	*/
 	public function getStaff($staff) {
 		$staffArray = array();
@@ -91,17 +91,14 @@ class Series extends MY_Model {
 	}
 
 	/*
-	 * Reemplaza los id por los nombres de cada revista y quita propiedades innecesarias.
-	 *
-	 * @autor dvaJi
+	* Reemplaza los id por los nombres de cada revista y quita propiedades innecesarias.
+	*
+	* @autor dvaJi
 	*/
 	public function getMagazines($magazines) {
 		$magazinesArray = array();
 		foreach ($magazines as $key => $value) {
-			$value->id = $value->id_magazines;
-			$value->name = $this->magazines->find($value->id)->name;
-			unset($value->magazines_id);
-			unset($value->series_id);
+			$value = $this->magazines->find($value->id_magazines);
 			array_push($magazinesArray, $value);
 		}
 
@@ -109,9 +106,9 @@ class Series extends MY_Model {
 	}
 
 	/*
-	 * Obtiene los nombres de los scan de cada release y se quitan propiedades innecesarias.
-	 *
-	 * @autor dvaJi
+	* Obtiene los nombres de los scan de cada release y se quitan propiedades innecesarias.
+	*
+	* @autor dvaJi
 	*/
 	public function getReleases($releases) {
 		$releasesArray = array();
@@ -133,14 +130,14 @@ class Series extends MY_Model {
 	}
 
 	/*
-	 * Se obtienen las portadas según su tipo
-	 * @example
-	 * 		1 = original
-	 * 		2 = large
-	 * 		3 = medium
-	 * 		4 = thumb
-	 *
-	 * @autor dvaJi
+	* Se obtienen las portadas según su tipo
+	* @example
+	* 		1 = original
+	* 		2 = large
+	* 		3 = medium
+	* 		4 = thumb
+	*
+	* @autor dvaJi
 	*/
 	public function getCovers($covers, $serie) {
 		$coversObj = new \stdClass;
@@ -171,9 +168,9 @@ class Series extends MY_Model {
 	}
 
 	/*
-	 * Obtiene el nombre por defecto de la serie, con el valor 1 de def
-	 *
-	 * @autor dvaJi
+	* Obtiene el nombre por defecto de la serie, con el valor 1 de def
+	*
+	* @autor dvaJi
 	*/
 	public function getNames($names) {
 		$namesArray = array();
@@ -187,9 +184,9 @@ class Series extends MY_Model {
 	}
 
 	/*
-	 * Obtiene los nombres alternativos de la serie.
-	 *
-	 * @autor dvaJi
+	* Obtiene los nombres alternativos de la serie.
+	*
+	* @autor dvaJi
 	*/
 	public function getDefaultName($names) {
 		foreach ($names as $key => $value) {
@@ -202,123 +199,123 @@ class Series extends MY_Model {
 	}
 
 	/*
-	 * Método se subida de la portada, en caso de que ya exista una; se elimina
-	 * busca y crea un directorio en caso de que no exista, copia la portada original
-	 * a ese directorio, luego crea un 'thumb' de diferentes tamaños [large, medium y thumb]
-	 *
-	 * @return array con las 4 portadas.
-	 *
-	 * @autor dvaJi
+	* Método se subida de la portada, en caso de que ya exista una; se elimina
+	* busca y crea un directorio en caso de que no exista, copia la portada original
+	* a ese directorio, luego crea un 'thumb' de diferentes tamaños [large, medium y thumb]
+	*
+	* @return array con las 4 portadas.
+	*
+	* @autor dvaJi
 	*/
 	public function uploadCover($serie, $cover) {
 
 		/*if (isset($serie->cover) && $serie->cover != NULL) {
-			$this->removeCover($serie);
-		}*/
+		$this->removeCover($serie);
+	}*/
 
-		$dir = "content/series/" . $serie->stub . "_" . $serie->uniqid . "/";
+	$dir = "content/series/" . $serie->stub . "_" . $serie->uniqid . "/";
 
-		// Copiar la portada original
-		if (!file_exists($dir)) {
-			mkdir($dir, 0777, true);
-		}
-		file_put_contents($dir . $cover->filename, base64_decode($cover->value));
+	// Copiar la portada original
+	if (!file_exists($dir)) {
+		mkdir($dir, 0777, true);
+	}
+	file_put_contents($dir . $cover->filename, base64_decode($cover->value));
 
-		// Revisar si el archivo es en realidad una imagen
-		if (!$imagedata = @getimagesize($dir . $cover->filename)) {
-			return false;
-		}
+	// Revisar si el archivo es en realidad una imagen
+	if (!$imagedata = @getimagesize($dir . $cover->filename)) {
+		return false;
+	}
 
-		$this->load->library('image_lib');
-		// Array con los distintos tamaños que se requieren
-		$image_sizes = array(
-			'thumb' => array(410, 100),
-			'medium' => array(560, 300),
-			'large' => array(800, 600)
+	$this->load->library('image_lib');
+	// Array con los distintos tamaños que se requieren
+	$image_sizes = array(
+		'thumb' => array(410, 100),
+		'medium' => array(560, 300),
+		'large' => array(800, 600)
+	);
+	foreach ($image_sizes as $key => $resize) {
+
+		$config = array(
+			'source_image' => $dir . $cover->filename,
+			'new_image' => $dir . $key . "_" . $cover->filename,
+			'maintain_ration' => true,
+			'quality' => 100,
+			'width' => $resize[0],
+			'height' => $resize[1]
 		);
-		foreach ($image_sizes as $key => $resize) {
 
-			$config = array(
-				'source_image' => $dir . $cover->filename,
-				'new_image' => $dir . $key . "_" . $cover->filename,
-				'maintain_ration' => true,
-				'quality' => 100,
-				'width' => $resize[0],
-				'height' => $resize[1]
-			);
-
-			$this->image_lib->initialize($config);
-			if (!$this->image_lib->resize()) {
-				return false;
-			}
-			$this->image_lib->clear();
-		}
-
-
-		// Ahora se crea el array con las portadas.
-		$coversArray = array();
-		for ($i = 1; $i < 5; $i++) {
-			$coverObj = new \stdClass;
-			$coverObj->id_staff = $staff->id;
-			$coverObj->filename = $this->getTypeCovers($i) . (($i != 1)? "_":"") . $cover->filename;
-			$coverObj->type = $i;
-			$coverObj->adult = 0;
-			$coverObj->height = ($i === 1) ? $imagedata["1"] : $image_sizes[$this->getTypeCovers($i)][0];
-			$coverObj->width = ($i === 1) ? $imagedata["0"] : $image_sizes[$this->getTypeCovers($i)][1];
-			$coverObj->mime = image_type_to_mime_type($imagedata["2"]);
-			$coverObj->size = filesize($dir . $coverObj->filename);
-			$coverObj->created = date("Y-m-d H:i:s");
-			$coverObj->updated = date("Y-m-d H:i:s");
-
-			array_push($coversArray, $coverObj);
-		}
-
-		return $coversArray;
-	}
-
-	/*
-	 * Elimina las portadas de una serie.
-	 * TODO TERMINAR ESTO :(
-	 * @autor dvaJi
-	*/
-	public function removeCover($serie, $covers) {
-		/*$dir = "content/series/" . $serie->stub . "_" . $serie->uniqid . "/";
-
-		if (!unlink($dir . $serie->cover)) {
+		$this->image_lib->initialize($config);
+		if (!$this->image_lib->resize()) {
 			return false;
 		}
-
-		for ($i = 1; $i < 5; $i++) {
-			if (!unlink($dir . "thumb_" . $serie->thumbnail)) {
-				return false;
-			} else {
-				$this->seriecovers->delete();
-			}
-		}
-
-		$row = array('cover' => NULL);
-		$this->update($serie->id, $row);
-		return true;*/
+		$this->image_lib->clear();
 	}
 
-	/*
-	 * Retorna el tipo de cover según el tipo
-	 *
-	 * @autor dvaJi
-	*/
-	private function getTypeCovers($type) {
-		if ($type == 1) {
-			return "";
 
-		} else if ($type == 2) {
-			return "large";
+	// Ahora se crea el array con las portadas.
+	$coversArray = array();
+	for ($i = 1; $i < 5; $i++) {
+		$coverObj = new \stdClass;
+		$coverObj->id_staff = $staff->id;
+		$coverObj->filename = $this->getTypeCovers($i) . (($i != 1)? "_":"") . $cover->filename;
+		$coverObj->type = $i;
+		$coverObj->adult = 0;
+		$coverObj->height = ($i === 1) ? $imagedata["1"] : $image_sizes[$this->getTypeCovers($i)][0];
+		$coverObj->width = ($i === 1) ? $imagedata["0"] : $image_sizes[$this->getTypeCovers($i)][1];
+		$coverObj->mime = image_type_to_mime_type($imagedata["2"]);
+		$coverObj->size = filesize($dir . $coverObj->filename);
+		$coverObj->created = date("Y-m-d H:i:s");
+		$coverObj->updated = date("Y-m-d H:i:s");
 
-		} else if ($type == 3) {
-			return "medium";
-
-		} else if ($type == 4) {
-			return "thumb";
-		}
+		array_push($coversArray, $coverObj);
 	}
+
+	return $coversArray;
+}
+
+/*
+* Elimina las portadas de una serie.
+* TODO TERMINAR ESTO :(
+* @autor dvaJi
+*/
+public function removeCover($serie, $covers) {
+	/*$dir = "content/series/" . $serie->stub . "_" . $serie->uniqid . "/";
+
+	if (!unlink($dir . $serie->cover)) {
+	return false;
+}
+
+for ($i = 1; $i < 5; $i++) {
+if (!unlink($dir . "thumb_" . $serie->thumbnail)) {
+return false;
+} else {
+$this->seriecovers->delete();
+}
+}
+
+$row = array('cover' => NULL);
+$this->update($serie->id, $row);
+return true;*/
+}
+
+/*
+* Retorna el tipo de cover según el tipo
+*
+* @autor dvaJi
+*/
+private function getTypeCovers($type) {
+	if ($type == 1) {
+		return "";
+
+	} else if ($type == 2) {
+		return "large";
+
+	} else if ($type == 3) {
+		return "medium";
+
+	} else if ($type == 4) {
+		return "thumb";
+	}
+}
 
 }
