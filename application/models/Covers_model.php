@@ -13,7 +13,7 @@ class Covers_model extends MY_Model {
 	*
 	* @autor dvaJi
 	*/
-	public function uploadCover($data, $type, $cover) {
+	public function uploadCover($data, $type, $idname, $cover) {
 
 		/*if (isset($data->cover) && $data->cover != NULL) {
 		$this->removeCover($data);
@@ -66,7 +66,7 @@ class Covers_model extends MY_Model {
 	$coversArray = array();
 	for ($i = 1; $i < 5; $i++) {
 		$coverObj = new \stdClass;
-		$coverObj->id_magazine = $data->id;
+		$coverObj->{$idname} = $data->id;
 		$coverObj->filename = $this->getTypeCovers($i) . (($i != 1)? "_":"") . $newFilename;
     $coverObj->def = 1;
 		$coverObj->type = $i;
