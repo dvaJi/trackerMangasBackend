@@ -50,7 +50,7 @@ class Staffs extends REST_Controller {
       }
       $staff->uniqid = uniqid();
       $staff->birth_place = (isset($data->birthPlace)) ? $data->birthPlace : NULL;
-      $staff->birth_date = (isset($data->birthDate)) ? $data->birthDate->formatted : NULL;
+      $staff->birth_date = (isset($data->birthDate)) ? $data->birthDate : NULL;
       $staff->gender = (isset($data->gender)) ? intval($data->gender) : NULL;
       $staff->description = (isset($data->description)) ? intval($data->description) : NULL;
       $staff->website = (isset($data->website)) ? $data->website : NULL;

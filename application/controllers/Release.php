@@ -60,8 +60,8 @@ class Release extends REST_Controller {
       $release->chapter = $data->chapter;
       $release->volume = $data->volume;
       $release->series_id = $data->serie[0]->value;
-      $release->created = (isset($data->publicationDate)) ? $data->publicationDate->formatted : date("Y-m-d H:i:s");
-      $release->updated = (isset($data->publicationDate)) ? $data->publicationDate->formatted : date("Y-m-d H:i:s");
+      $release->created = (isset($data->publicationDate)) ? $data->publicationDate : date("Y-m-d H:i:s");
+      $release->updated = (isset($data->publicationDate)) ? $data->publicationDate : date("Y-m-d H:i:s");
 
       $release->id = $this->releases->insert($release);
 

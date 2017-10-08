@@ -43,7 +43,7 @@ class Scan extends REST_Controller {
         throw new RuntimeException("No se ha ingresado un nombre.");
       }
       $scan->uniqid = uniqid();
-      $scan->creation_date = (isset($data->creationDate)) ? $data->creationDate->formatted : NULL;
+      $scan->creation_date = (isset($data->creationDate)) ? $data->creationDate : NULL;
       $scan->description = (isset($data->description)) ? intval($data->description) : NULL;
       $scan->website = (isset($data->website)) ? $data->website : NULL;
       $scan->twitter = (isset($data->twitter)) ? intval($data->twitter) : NULL;

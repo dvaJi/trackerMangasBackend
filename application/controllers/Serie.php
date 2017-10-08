@@ -152,7 +152,7 @@ class Serie extends REST_Controller {
       $serie->status_oc = (isset($data->statusOC)) ? intval($data->statusOC) : NULL;
       $serie->status_oc_note = (isset($data->statusOCNote)) ? $data->statusOCNote : NULL;
       $serie->completely_sc = (isset($data->statusSC)) ? intval($data->statusSC) : NULL;
-      $serie->publication_date = (isset($data->publicationDate)) ? $data->publicationDate->formatted : NULL;
+      $serie->publication_date = (isset($data->publicationDate)) ? $data->publicationDate : NULL;
       $serie->created = date("Y-m-d H:i:s");
       $serie->updated = date("Y-m-d H:i:s");
 

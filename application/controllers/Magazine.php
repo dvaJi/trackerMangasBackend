@@ -47,7 +47,7 @@ class Magazine extends REST_Controller {
       $magazine->native_name = (isset($data->nameAltInput)) ? $data->nameAltInput : NULL;
       $magazine->id_publisher = (isset($data->publisher)) ? intval($data->publisher) : NULL;
       $magazine->description = (isset($data->description)) ? intval($data->description) : NULL;
-      $magazine->circulation = (isset($data->circulation)) ? $data->circulation->formatted : NULL;
+      $magazine->circulation = (isset($data->circulation)) ? $data->circulation : NULL;
       $magazine->release_schedule = (isset($data->releaseSchedule)) ? intval($data->releaseSchedule) : NULL;
       $magazine->website = (isset($data->website)) ? $data->website : NULL;
       $magazine->twitter = (isset($data->twitter)) ? intval($data->twitter) : NULL;
