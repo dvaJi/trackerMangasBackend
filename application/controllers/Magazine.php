@@ -58,7 +58,7 @@ class Magazine extends REST_Controller {
 
       // Covers
       if (isset($data->cover) && $data->cover != NULL) {
-        $covers = $this->covers_model->uploadCover($magazine, 'magazine', 'id_magazines', $data->cover);
+        $covers = $this->covers_model->uploadCover($magazine, 'magazine', 'id_magazine', $data->cover);
         $this->magazinescovers->insertBatch($covers);
       }
 

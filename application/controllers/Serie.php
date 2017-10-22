@@ -43,19 +43,54 @@ class Serie extends REST_Controller {
         $id = $this->get('id');
         // If the id parameter doesn't exist return all the series
         if ($id === NULL) {
+          $this->load->model('releases');
+          $this->load->model('scans');
+          $this->load->model('staffaltnames');
+
+          // Filtros
+          $periodo = $this->get('time'); // weekly, monthly, anually, historic
+          $order = $this->get('order');
+          $limit = 10;
+          // no puede sobrepasar los 15
+          if (!$this->get('limit') == NULL) {
+            $limit = ($this->get('limit') > 15) ? 15 : $this->get('limit');
+          }
+          $tipo = $this->get('type');
           $page = ($this->get('page') === NULL) ? 1 : $this->get('page');
-          $series = $this->series->relate()->paginate(10, (int) $page);
+
+          // Validar si existen type y order
+          if ($tipo == NULL || $this->series->validateType($tipo) || $order == NULL || $this->series->validateOrder($order)) {
+            throw new RuntimeException("El parámetro no existe.");
+          }
+
+          $where = array(
+            'type' => $tipo
+          );
+
+          $series = $this->series->relate()->where($where)->order_by($order, 'DESC')->paginate($limit, (int) $page);
+
           if ($series) {
-            // Set the response and exit
+            foreach ($series as $key => $serie) {
+              $serie->name = $this->series->getDefaultName($serie->names);
+              $serie->names = $this->series->getNames($serie->names);
+              $serie->genres = $this->series->getGenres($serie->genres);
+              $serie->staff = $this->series->getStaff($serie->staff);
+              $serie->magazines = $this->series->getMagazines($serie->magazines);
+              $serie->releases = $this->series->getReleases($this->releases->relate()->getWhere(['series_id' => $serie->id]));
+              $serie->cover = $this->series->getCovers($serie->cover, $serie);
+            }
             $this->response($series, REST_Controller::HTTP_OK);
+
           } else {
             $this->response([
               'status' => FALSE,
               'message' => 'No series were found'
             ], REST_Controller::HTTP_NOT_FOUND);
+
           }
         } else {
           $this->response(NULL, REST_Controller::HTTP_BAD_REQUEST);
+
         }
       } catch (Exception $e) {
         $response = [
@@ -63,6 +98,7 @@ class Serie extends REST_Controller {
           'message' => $e->getMessage(),
         ];
         $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+
       }
     }
 
@@ -127,19 +163,18 @@ class Serie extends REST_Controller {
   }
 
   /**
-  * TODO: Covers con distintos tamaños
+  * TODO: Validaciones
   *
   * @author          DvaJi
   */
   public function page_post() {
     $this->load->model('seriegenres');
+    $this->load->model('covers_model');
 
     $data = json_decode(file_get_contents('php://input'));
 
     try {
       $serie = new \stdClass;
-
-      //$serie->name = $data->name;
 
       $serie->stub = url_title($data->name, 'underscore', TRUE);
       if ($serie->stub == NULL) {
@@ -164,8 +199,8 @@ class Serie extends REST_Controller {
 
       // Covers
       if (isset($data->cover) && $data->cover != NULL) {
-        $covers = $this->series->uploadCover($serie, $data->cover);
-        $this->seriecovers->insert($covers);
+        $covers = $this->covers_model->uploadCover($serie, 'series', 'id_series', $data->cover);
+        $this->seriecovers->insertBatch($covers);
       }
 
       // Nombres Alt.

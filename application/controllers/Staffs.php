@@ -20,7 +20,7 @@ class Staffs extends REST_Controller {
 
   public function index_get() {
     $page = ($this->get('page') === NULL) ? 1 : $this->get('page');
-    $staffs = $this->staff->order_by('stub', 'ASC')->relate()->paginate(10, (int) $page);
+    $staffs = $this->staff->order_by('stub', 'ASC')->relate()->paginate(15, (int) $page);
 
     foreach ($staffs as $key => $staff) {
       $staff->name = $this->staff->getDefaultName($staff->names);
@@ -33,7 +33,7 @@ class Staffs extends REST_Controller {
     } else {
       $this->response([
         'status' => FALSE,
-        'message' => 'No releases were found'
+        'message' => 'No staffs were found'
       ], REST_Controller::HTTP_NOT_FOUND);
     }
   }
