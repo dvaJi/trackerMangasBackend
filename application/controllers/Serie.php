@@ -38,7 +38,7 @@ class Serie extends REST_Controller {
       $this->response('Token not found', REST_Controller::HTTP_BAD_REQUEST);
     } else {
       try {
-        $token = $this->headers['authorization'];
+        $token = Authorization::getBearerToken();
         $token = Authorization::validateToken($token);
         $id = $this->get('id');
         // If the id parameter doesn't exist return all the series
@@ -114,7 +114,8 @@ class Serie extends REST_Controller {
       $this->response('Token not found', REST_Controller::HTTP_BAD_REQUEST);
     } else {
       try {
-        $token = $this->headers['authorization'];
+
+        $token = Authorization::getBearerToken();
         $token = Authorization::validateToken($token);
         $id = $this->get('id');
 

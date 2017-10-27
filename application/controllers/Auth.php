@@ -25,15 +25,14 @@ class Auth extends REST_Controller {
     }
 
     public function login_post() {
-        $remember = (bool) $this->input->post('remember');
 		$data = json_decode(file_get_contents('php://input'));
 
-		if ($this->ion_auth->login($data->username, $data->password, $remember)) {
+		if ($this->ion_auth->login($data->username, $data->password, $data->remember)) {
 			$user = $this->ion_auth->user()->row();
 			$tokenData = array();
             $tokenData['id'] = $data->username;
             $tokenData['groups'] = $this->ion_auth->get_users_groups($user->id)->result();
-            $tokenData['remember'] = $remember;
+            $tokenData['remember'] = $data->remember;
             $tokenData['iat'] = time();
             $tokenData['exp'] = time() + 30*60*20*32;
             $response['username'] = $data->username;

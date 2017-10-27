@@ -9,8 +9,14 @@ class Scan extends REST_Controller {
   function __construct() {
     // Construct the parent class
     parent::__construct();
+    $this->load->model('series');
+    $this->load->model('seriesaltnames');
     $this->load->model('scans');
     $this->load->model('scanscovers');
+    $this->load->model('covers_model');
+    $this->load->model('releases');
+    $this->load->model('staff');
+    $this->load->model('staffaltnames');
 
     //$this->methods['get_get']['limit'] = 500; // 500 requests per hour per user/key
     //$this->methods['enviar_post']['limit'] = 100; // 100 requests per hour per user/key
@@ -18,16 +24,40 @@ class Scan extends REST_Controller {
   }
 
   public function index_get() {
-    $scans = $this->scans->order_by('name', 'ASC')->getAll();
+    if ($this->get('id') != NULL) {
+      // DETALLE
+      $id = (int) $this->get('id');
 
-    if ($scans) {
-      header('X-TOTAL-ROWS: ' . $this->scans->countAll());
-      $this->response($scans, REST_Controller::HTTP_OK);
+      if ($id <= 0) {
+        $this->response(NULL, REST_Controller::HTTP_BAD_REQUEST);
+      }
+
+      $scans = $this->scans->relate()->find($id);
+
+      if (!empty($scans)) {
+        $scans->cover = $this->covers_model->getCovers($scans, 'scans', 'id_scans', $scans->cover);
+        $scans->releases = $this->scans->getReleases($scans->releases);
+
+        $this->set_response($scans, REST_Controller::HTTP_OK);
+      } else {
+        $this->set_response([
+          'status' => FALSE,
+          'message' => 'Staff could not be found'
+        ], REST_Controller::HTTP_NOT_FOUND);
+      }
+
     } else {
-      $this->response([
-        'status' => FALSE,
-        'message' => 'No scans were found'
-      ], REST_Controller::HTTP_NOT_FOUND);
+      $scans = $this->scans->order_by('name', 'ASC')->getAll();
+
+      if ($scans) {
+        header('X-TOTAL-ROWS: ' . $this->scans->countAll());
+        $this->response($scans, REST_Controller::HTTP_OK);
+      } else {
+        $this->response([
+          'status' => FALSE,
+          'message' => 'No scans were found'
+        ], REST_Controller::HTTP_NOT_FOUND);
+      }
     }
   }
 

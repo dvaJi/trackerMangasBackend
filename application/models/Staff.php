@@ -19,10 +19,17 @@ class Staff extends MY_Model {
 			'foreign'   => 'id_staff',
 			'variable'  => 'cover'
 		));
+
+		$this->addRelation(array(
+			'primary'   => 'id',
+			'table'     => 'serie_staff',
+			'foreign'   => 'id_staff',
+			'variable'  => 'series'
+		));
 	}
 
 	/*
-	 * Obtiene el nombre por defecto de la serie, con el valor 1 de def
+	 * Obtiene el nombre por defecto del staff, con el valor 1 de def
 	 *
 	 * @autor dvaJi
 	*/
@@ -30,7 +37,9 @@ class Staff extends MY_Model {
 		$namesArray = array();
 		foreach ($names as $key => $value) {
 			if ($value->def == 0) {
-				array_push($namesArray, $value->name);
+				unset($value->id_staff);
+				unset($value->def);
+				array_push($namesArray, $value);
 			}
 		}
 
@@ -38,7 +47,7 @@ class Staff extends MY_Model {
 	}
 
 	/*
-	 * Obtiene los nombres alternativos de la serie.
+	 * Obtiene los nombres alternativos del staff.
 	 *
 	 * @autor dvaJi
 	*/
@@ -49,102 +58,40 @@ class Staff extends MY_Model {
 			}
 		}
 
-		return $namesArray;
+		return null;
 	}
 
 	/*
-	 * Método se subida de la portada, en caso de que ya exista una; se elimina
-	 * busca y crea un directorio en caso de que no exista, copia la portada original
-	 * a ese directorio, luego crea un 'thumb' de diferentes tamaños [large, medium y thumb]
-	 *
-	 * @return array con las 4 portadas.
+	 * Obtiene las series del staff.
 	 *
 	 * @autor dvaJi
 	*/
-	public function uploadCover($staff, $cover) {
+	public function getSeries($series) {
 
-		/*if (isset($staff->cover) && $staff->cover != NULL) {
-			$this->removeCover($staff);
-		}*/
-
-		$dir = "content/staff/" . $staff->stub . "_" . $staff->uniqid . "/";
-
-		// Copiar la portada original
-		if (!file_exists($dir)) {
-			mkdir($dir, 0777, true);
-		}
-		file_put_contents($dir . $cover->filename, base64_decode($cover->value));
-
-		// Revisar si el archivo es en realidad una imagen
-		if (!$imagedata = @getimagesize($dir . $cover->filename)) {
-			return false;
+		if ($series == NULL) {
+			return null;
 		}
 
-		$this->load->library('image_lib');
-		// Array con los distintos tamaños que se requieren
-		$image_sizes = array(
-			'thumb' => array(410, 100),
-			'medium' => array(560, 300),
-			'large' => array(800, 600)
-		);
-		foreach ($image_sizes as $key => $resize) {
+		$seriesArray = array();
+		foreach ($series as $key => $value) {
 
-			$config = array(
-				'source_image' => $dir . $cover->filename,
-				'new_image' => $dir . $key . "_" . $cover->filename,
-				'maintain_ration' => true,
-				'quality' => 100,
-				'width' => $resize[0],
-				'height' => $resize[1]
-			);
+			$serie = $this->series->find($value->id_series);
+			$serie->name = $this->seriesaltnames->find(array('id_series' => $value->id_series, 'def' => 1))->name;
+			$rol = $this->roles->find($value->id_roles);
 
-			$this->image_lib->initialize($config);
-			if (!$this->image_lib->resize()) {
-				return false;
-			}
-			$this->image_lib->clear();
+
+			$value->name = $serie->name;
+			$value->publicationDate = $serie->publication_date;
+			$value->serieId = $serie->id;
+			$value->stub = $serie->stub;
+			$value->rol = $rol->name;
+			unset($value->id_series);
+			unset($value->id_roles);
+			unset($value->id_staff);
+			array_push($seriesArray, $value);
 		}
 
-
-		// Ahora se crea el array con las portadas.
-		$coversArray = array();
-		for ($i = 1; $i < 5; $i++) {
-			$coverObj = new \stdClass;
-			$coverObj->id_staff = $staff->id;
-			$coverObj->filename = $this->getTypeCovers($i) . (($i != 1)? "_":"") . $cover->filename;
-			$coverObj->type = $i;
-			$coverObj->adult = 0;
-			$coverObj->height = ($i === 1) ? $imagedata["1"] : $image_sizes[$this->getTypeCovers($i)][0];
-			$coverObj->width = ($i === 1) ? $imagedata["0"] : $image_sizes[$this->getTypeCovers($i)][1];
-			$coverObj->mime = image_type_to_mime_type($imagedata["2"]);
-			$coverObj->size = filesize($dir . $coverObj->filename);
-			$coverObj->created = date("Y-m-d H:i:s");
-			$coverObj->updated = date("Y-m-d H:i:s");
-
-			array_push($coversArray, $coverObj);
-		}
-
-		return $coversArray;
-	}
-
-	/*
-	 * Retorna el tipo de cover según el valor numerico
-	 *
-	 * @autor dvaJi
-	*/
-	private function getTypeCovers($type) {
-		if ($type == 1) {
-			return "";
-
-		} else if ($type == 2) {
-			return "large";
-
-		} else if ($type == 3) {
-			return "medium";
-
-		} else if ($type == 4) {
-			return "thumb";
-		}
+		return $seriesArray;
 	}
 
 }

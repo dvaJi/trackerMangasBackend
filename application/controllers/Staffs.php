@@ -9,9 +9,13 @@ class Staffs extends REST_Controller {
   function __construct() {
     // Construct the parent class
     parent::__construct();
+    $this->load->model('series');
+    $this->load->model('seriesaltnames');
+    $this->load->model('roles');
     $this->load->model('staff');
     $this->load->model('staffaltnames');
     $this->load->model('staffcovers');
+    $this->load->model('covers_model');
 
     //$this->methods['get_get']['limit'] = 500; // 500 requests per hour per user/key
     //$this->methods['enviar_post']['limit'] = 100; // 100 requests per hour per user/key
@@ -19,23 +23,52 @@ class Staffs extends REST_Controller {
   }
 
   public function index_get() {
-    $page = ($this->get('page') === NULL) ? 1 : $this->get('page');
-    $staffs = $this->staff->order_by('stub', 'ASC')->relate()->paginate(15, (int) $page);
 
-    foreach ($staffs as $key => $staff) {
-      $staff->name = $this->staff->getDefaultName($staff->names);
-      $staff->names = $this->staff->getNames($staff->names);
-    }
+    if ($this->get('id') != NULL) {
+      // DETALLE
+      $id = (int) $this->get('id');
 
-    if ($staffs) {
-      header('X-TOTAL-ROWS: ' . $this->staff->countAll());
-      $this->response($staffs, REST_Controller::HTTP_OK);
+      if ($id <= 0) {
+        $this->response(NULL, REST_Controller::HTTP_BAD_REQUEST);
+      }
+
+      $staff = $this->staff->relate()->find($id);
+
+      if (!empty($staff)) {
+        $staff->name = $this->staff->getDefaultName($staff->names);
+        $staff->names = $this->staff->getNames($staff->names);
+        $staff->cover = $this->covers_model->getCovers($staff, 'staff', 'id_staff', $staff->cover);
+        $staff->series = $this->staff->getSeries($staff->series);
+
+        $this->set_response($staff, REST_Controller::HTTP_OK);
+      } else {
+        $this->set_response([
+          'status' => FALSE,
+          'message' => 'Staff could not be found'
+        ], REST_Controller::HTTP_NOT_FOUND);
+      }
+
     } else {
-      $this->response([
-        'status' => FALSE,
-        'message' => 'No staffs were found'
-      ], REST_Controller::HTTP_NOT_FOUND);
+      // LISTA
+      $page = ($this->get('page') === NULL) ? 1 : $this->get('page');
+      $staffs = $this->staff->order_by('stub', 'ASC')->relate()->paginate(15, (int) $page);
+
+      foreach ($staffs as $key => $staff) {
+        $staff->name = $this->staff->getDefaultName($staff->names);
+        $staff->names = $this->staff->getNames($staff->names);
+      }
+
+      if ($staffs) {
+        header('X-TOTAL-ROWS: ' . $this->staff->countAll());
+        $this->response($staffs, REST_Controller::HTTP_OK);
+      } else {
+        $this->response([
+          'status' => FALSE,
+          'message' => 'No staffs were found'
+        ], REST_Controller::HTTP_NOT_FOUND);
+      }
     }
+
   }
 
   public function index_post() {
@@ -52,9 +85,9 @@ class Staffs extends REST_Controller {
       $staff->birth_place = (isset($data->birthPlace)) ? $data->birthPlace : NULL;
       $staff->birth_date = (isset($data->birthDate)) ? $data->birthDate : NULL;
       $staff->gender = (isset($data->gender)) ? intval($data->gender) : NULL;
-      $staff->description = (isset($data->description)) ? intval($data->description) : NULL;
+      $staff->description = (isset($data->description)) ? $data->description : NULL;
       $staff->website = (isset($data->website)) ? $data->website : NULL;
-      $staff->twitter = (isset($data->twitter)) ? intval($data->twitter) : NULL;
+      $staff->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
       $staff->created = date("Y-m-d H:i:s");
       $staff->updated = date("Y-m-d H:i:s");
 
@@ -62,6 +95,7 @@ class Staffs extends REST_Controller {
 
       // Covers
       if (isset($data->cover) && $data->cover != NULL) {
+        $covers = $this->covers_model->uploadCover($staff, 'staff', 'id_staff', $data->cover);
         $covers = $this->staff->uploadCover($staff, $data->cover);
         $this->staffcovers->insertBatch($covers);
       }

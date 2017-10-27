@@ -5,6 +5,66 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Covers_model extends MY_Model {
 
 	/*
+	* Se obtienen las portadas según su tipo
+	* @example
+	* 		1 = original
+	* 		2 = large
+	* 		3 = medium
+	* 		4 = thumb
+	*
+	* @autor dvaJi
+	*/
+	public function getCovers($data, $type, $idname, $covers) {
+		$coversObj = new \stdClass;
+
+		/*
+		*	En caso de que no tenga una portada, se reemplazará por una por defecto
+		* la cual se encuentra en su respectivo directorio
+		* @example: /content/staff/default.png
+		*/
+		if ($covers == NULL) {
+			for ($i = 1; $i < 5; $i++) {
+				$cover = new \stdClass;
+				$cover->path_full = "/api/content/" . $type . "/default.png";
+				$cover->id = $data->id;
+				$cover->filename = "default.png";
+				$cover->type = $this->getFullTypeCovers($i);
+				$cover->adult = 0;
+
+				$coversObj->{$this->getFullTypeCovers($i)} = $cover;
+
+			}
+
+			return $coversObj;
+		}
+
+		foreach ($covers as $key => $value) {
+			$value->path_full = "/api/content/" . $type . "/" . $data->stub . "_" . $data->uniqid . "/" . $value->filename;
+			unset($value->{$idname});
+			unset($value->created);
+			unset($value->updated);
+			if ($value->type == 1) {
+				$coversObj->original = $value;
+				unset($value->type);
+
+			} else if ($value->type == 2) {
+				$coversObj->large = $value;
+				unset($value->type);
+
+			} else if ($value->type == 3) {
+				$coversObj->medium = $value;
+				unset($value->type);
+
+			} else if ($value->type == 4) {
+				$coversObj->thumb = $value;
+				unset($value->type);
+			}
+		}
+
+		return $coversObj;
+	}
+
+	/*
 	* Método se subida de la portada, en caso de que ya exista una; se elimina
 	* busca y crea un directorio en caso de que no exista, copia la portada original
 	* a ese directorio, luego crea un 'thumb' de diferentes tamaños [large, medium y thumb]
@@ -117,6 +177,26 @@ class Covers_model extends MY_Model {
 	private function getTypeCovers($type) {
 		if ($type == 1) {
 			return "";
+
+		} else if ($type == 2) {
+			return "large";
+
+		} else if ($type == 3) {
+			return "medium";
+
+		} else if ($type == 4) {
+			return "thumb";
+		}
+	}
+
+	/*
+	* Retorna el tipo de cover según el tipo con todos sus nombres
+	*
+	* @autor dvaJi
+	*/
+	private function getFullTypeCovers($type) {
+		if ($type == 1) {
+			return "original";
 
 		} else if ($type == 2) {
 			return "large";
