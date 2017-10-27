@@ -34,7 +34,7 @@ class Serie extends REST_Controller {
   * @author          DvaJi
   */
   public function list_get() {
-    if(Authorization::tokenIsExist($this->headers)) {
+    if(!Authorization::tokenIsExist($this->headers)) {
       $this->response('Token not found', REST_Controller::HTTP_BAD_REQUEST);
     } else {
       try {
@@ -110,7 +110,7 @@ class Serie extends REST_Controller {
   * @author          DvaJi
   */
   public function page_get() {
-    if(Authorization::tokenIsExist($this->headers)) {
+    if(!Authorization::tokenIsExist($this->headers)) {
       $this->response('Token not found', REST_Controller::HTTP_BAD_REQUEST);
     } else {
       try {
