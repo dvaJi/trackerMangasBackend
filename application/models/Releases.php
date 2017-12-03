@@ -24,7 +24,9 @@ class Releases extends MY_Model {
 	public function getGroups($groups) {
 		$groupsArray = array();
 		foreach($groups as $key => $value) {
-			$value->name = $this->scans->find($value->group_id)->name;
+			$group = $this->scans->find($value->group_id);
+			$value->name = $group->name;
+			$value->stub = $group->stub;
 			unset($value->release_id);
 			array_push($groupsArray, $value);
 		}

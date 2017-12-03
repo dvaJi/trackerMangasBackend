@@ -224,6 +224,15 @@ class MY_Model extends Pagination {
       return $this->db->select_sum($column)->get($this->table)->result()[0]->$column;
     }
 
+    /**
+     * return count of all results
+     * @param  $string $column
+     * @return integer
+     */
+    public function count() {
+      return $this->db->count_all_results($this->table);
+    }
+
 
     /**
      * For inserting single row in table
@@ -231,12 +240,24 @@ class MY_Model extends Pagination {
      * @return integer or boolean
      */
     public function insert($data = array()) {
-     	if(sizeof($data) > 0) {
+      if(sizeof($data) > 0) {
         $data = $this->filterFillable($data);
-    		$this->db->insert($this->table, $data);
-        return $this->db->insert_id();
-    	}
-      	return false;
+      	$this->db->insert($this->table, $data);
+        $return = $this->db->insert_id();
+        $error = $this->db->error();
+
+        if ($error['code'] === 0  &&  $return != 0 ) {
+          $result = new \stdClass;
+          $result->status = true;
+          $result->id = $return;
+          return $result;
+        } else {
+          return $error;
+        }
+      } else {
+        return false;
+      }
+
     }
 
 

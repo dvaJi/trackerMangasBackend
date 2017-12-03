@@ -83,9 +83,9 @@ class Series extends MY_Model {
 	public function getStaff($staff) {
 		$staffArray = array();
 		foreach ($staff as $key => $value) {
-			$value->id = $value->id_staff;
-			$elstaff = $this->staff->find($value->id);
-			$conditions = array('id_staff' => $value->id, 'def' => 1);
+			//$value->id = $value->id_staff;
+			$elstaff = $this->staff->find($value->id_staff);
+			$conditions = array('id_staff' => $value->id_staff, 'def' => 1);
 			$value->name = $this->staffaltnames->find($conditions)->name;
 			$value->image = ($elstaff->image != NULL || $elstaff->image != '') ? $elstaff->image:'default.png';
 			$value->stub = $elstaff->stub;
@@ -95,6 +95,41 @@ class Series extends MY_Model {
 			array_push($staffArray, $value);
 		}
 		return $staffArray;
+	}
+
+	public function getStaffFormated($staff, $idSeries) {
+		if (empty($staff) || count($staff) === 1) {
+			return $staff;
+		}
+
+
+		$this->db->select('staff.stub, staff.uniqid, serie_staff.id, serie_staff.id_series, serie_staff.id_staff, associated_names_mangaka.name, staff_covers.filename AS image, GROUP_CONCAT(roles.name) AS rol');
+    $this->db->from('serie_staff');
+    $this->db->join('staff', 'staff.id = serie_staff.id_staff');
+    $this->db->join('associated_names_mangaka', 'associated_names_mangaka.id_staff = staff.id');
+		$this->db->join('staff_covers', 'staff_covers.id_staff = staff.id', 'left');
+		$this->db->join('roles', 'roles.id = serie_staff.id_roles');
+    $this->db->where('serie_staff.id_series', $idSeries);
+    $this->db->where('associated_names_mangaka.def', 1);
+		$this->db->group_by("serie_staff.id_staff");
+    $query = $this->db->get();
+
+    if (!empty($query->result())) {
+			$staffs = array();
+			foreach ($query->result() as $key => $value) {
+				$roles = explode(',', $value->rol);
+				$value->rol = array_values(array_unique($roles));
+				$value->image = ($value->image != NULL || $value->image != '') ? $value->image:'default.png';
+				if ($value->image == 'default.png') {
+					$value->image_url_full = "/api/content/staff/" . $value->image;
+				} else {
+					$value->image_url_full = "/api/content/staff/" . $value->stub . "_" . $value->uniqid ."/" . $value->image;
+				}
+			}
+      return $query->result();
+    } else {
+      return $query->result();
+    }
 	}
 
 	/*

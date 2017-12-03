@@ -73,7 +73,9 @@ class Scan extends REST_Controller {
         throw new RuntimeException("No se ha ingresado un nombre.");
       }
       $scan->uniqid = uniqid();
-      $scan->creation_date = (isset($data->creationDate)) ? $data->creationDate : NULL;
+      if (isset($data->creationDate)) {
+        $scan->creation_date = $data->creationDate->year . "-" . $data->creationDate->month . "-" . $data->creationDate->day;
+      }
       $scan->description = (isset($data->description)) ? intval($data->description) : NULL;
       $scan->website = (isset($data->website)) ? $data->website : NULL;
       $scan->twitter = (isset($data->twitter)) ? intval($data->twitter) : NULL;
@@ -81,7 +83,11 @@ class Scan extends REST_Controller {
       $scan->created = date("Y-m-d H:i:s");
       $scan->updated = date("Y-m-d H:i:s");
 
-      $scan->id = $this->scans->insert($scan);
+      $result = $this->scans->insert($scan);
+      if ($result->status !== true) {
+        throw new RuntimeException($result);
+      }
+      $scan->id = $result->id;
 
       // Covers
       if (isset($data->cover) && $data->cover != NULL) {

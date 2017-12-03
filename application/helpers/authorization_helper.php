@@ -24,8 +24,7 @@ class Authorization
 
   public static function tokenIsExist($headers)
   {
-    return (array_key_exists('Authorization', $headers)
-    && !empty($headers['Authorization']));
+    return (Authorization::extractHeader() != NULL);
   }
 
   public static function extractHeader() {

@@ -72,14 +72,21 @@ class Magazine extends REST_Controller {
       $magazine->native_name = (isset($data->nameAltInput)) ? $data->nameAltInput : NULL;
       $magazine->id_publisher = (isset($data->publisher)) ? intval($data->publisher) : NULL;
       $magazine->description = (isset($data->description)) ? $data->description : NULL;
-      $magazine->circulation = (isset($data->circulation)) ? $data->circulation : NULL;
+      if (isset($data->circulation)) {
+        $magazine->circulation = $data->circulation->year . "-" . $data->circulation->month . "-" . $data->circulation->day;
+      }
       $magazine->release_schedule = (isset($data->releaseSchedule)) ? intval($data->releaseSchedule) : NULL;
       $magazine->website = (isset($data->website)) ? $data->website : NULL;
       $magazine->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
       $magazine->created = date("Y-m-d H:i:s");
       $magazine->updated = date("Y-m-d H:i:s");
 
-      $magazine->id = $this->magazines->insert($magazine);
+      $result = $this->magazines->insert($magazine);
+      if ($result->status !== true) {
+        throw new RuntimeException($result);
+      }
+
+      $magazine->id = $result->id;
 
       // Covers
       if (isset($data->cover) && $data->cover != NULL) {

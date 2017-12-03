@@ -60,14 +60,19 @@ class Release extends REST_Controller {
       $release->chapter = $data->chapter;
       $release->volume = $data->volume;
       $release->series_id = $data->serie[0]->value;
-      $release->created = (isset($data->publicationDate)) ? $data->publicationDate : date("Y-m-d H:i:s");
-      $release->updated = (isset($data->publicationDate)) ? $data->publicationDate : date("Y-m-d H:i:s");
-
-      $release->id = $this->releases->insert($release);
-
-      if ($release->id == NULL) {
-        throw new RuntimeException("Ocurrió un error al insertar release.");
+      if (isset($data->publicationDate)) {
+        $release->created = $data->publicationDate->year . "-" . $data->publicationDate->month . "-" . $data->publicationDate->day;
+        $release->updated = $data->publicationDate->year . "-" . $data->publicationDate->month . "-" . $data->publicationDate->day;
+      } else {
+        $release->created = date("Y-m-d H:i:s");
+        $release->updated = date("Y-m-d H:i:s");
       }
+
+      $result = $this->releases->insert($release);
+      if ($result->status !== true) {
+        throw new RuntimeException($result);
+      }
+      $release->id = $result->id;
 
       if (! empty($data->scans)) {
         $scans = array();

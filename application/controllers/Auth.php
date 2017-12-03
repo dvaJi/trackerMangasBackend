@@ -30,7 +30,8 @@ class Auth extends REST_Controller {
 		if ($this->ion_auth->login($data->username, $data->password, $data->remember)) {
 			$user = $this->ion_auth->user()->row();
 			$tokenData = array();
-            $tokenData['id'] = $data->username;
+            $tokenData['id'] = $user->id;
+            $tokenData['username'] = $data->username;
             $tokenData['groups'] = $this->ion_auth->get_users_groups($user->id)->result();
             $tokenData['remember'] = $data->remember;
             $tokenData['iat'] = time();

@@ -99,9 +99,9 @@ class Covers_model extends MY_Model {
 		$this->load->library('image_lib');
 		// Array con los distintos tamaños que se requieren
 		$image_sizes = array(
-			'thumb' => array(410, 200),
-			'medium' => array(560, 300),
-			'large' => array(800, 600)
+			'thumb' => array(240, 300),
+			'medium' => array(300, 560),
+			'large' => array(600, 800)
 		);
 		foreach ($image_sizes as $key => $resize) {
 
@@ -121,6 +121,24 @@ class Covers_model extends MY_Model {
 			$this->image_lib->clear();
 		}
 
+		//Resize original
+		if ($imagedata["1"] > 1200) {
+			$config = array(
+				'source_image' => $dir . $newFilename,
+				'new_image' => $dir . $newFilename,
+				'maintain_ration' => true,
+				'overwrite' => true,
+				'quality' => 100,
+				'width' => 884,
+				'height' => 1200
+			);
+
+			$this->image_lib->initialize($config);
+			if (!$this->image_lib->resize()) {
+				return false;
+			}
+			$this->image_lib->clear();
+		}
 
 		// Ahora se crea el array con las portadas.
 		$coversArray = array();

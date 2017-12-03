@@ -83,20 +83,26 @@ class Staffs extends REST_Controller {
       }
       $staff->uniqid = uniqid();
       $staff->birth_place = (isset($data->birthPlace)) ? $data->birthPlace : NULL;
-      $staff->birth_date = (isset($data->birthDate)) ? $data->birthDate : NULL;
+      if (isset($data->birthDate)) {
+        $staff->birth_date = $data->birthDate->year . "-" . $data->birthDate->month . "-" . $data->birthDate->day;
+      }
       $staff->gender = (isset($data->gender)) ? intval($data->gender) : NULL;
       $staff->description = (isset($data->description)) ? $data->description : NULL;
       $staff->website = (isset($data->website)) ? $data->website : NULL;
       $staff->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
+      $staff->pixiv = (isset($data->pixiv)) ? $data->pixiv : NULL;
       $staff->created = date("Y-m-d H:i:s");
       $staff->updated = date("Y-m-d H:i:s");
 
-      $staff->id = $this->staff->insert($staff);
+      $result = $this->staff->insert($staff);
+      if ($result->status !== true) {
+        throw new RuntimeException($result);
+      }
+      $staff->id = $result->id;
 
       // Covers
       if (isset($data->cover) && $data->cover != NULL) {
         $covers = $this->covers_model->uploadCover($staff, 'staff', 'id_staff', $data->cover);
-        $covers = $this->staff->uploadCover($staff, $data->cover);
         $this->staffcovers->insertBatch($covers);
       }
 
