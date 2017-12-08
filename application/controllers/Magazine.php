@@ -70,12 +70,12 @@ class Magazine extends REST_Controller {
       }
       $magazine->uniqid = uniqid();
       $magazine->native_name = (isset($data->nameAltInput)) ? $data->nameAltInput : NULL;
-      $magazine->id_publisher = (isset($data->publisher)) ? intval($data->publisher) : NULL;
+      $magazine->id_publisher = (isset($data->publisher)) ? intval($data->publisher->id) : NULL;
       $magazine->description = (isset($data->description)) ? $data->description : NULL;
       if (isset($data->circulation)) {
         $magazine->circulation = $data->circulation->year . "-" . $data->circulation->month . "-" . $data->circulation->day;
       }
-      $magazine->release_schedule = (isset($data->releaseSchedule)) ? intval($data->releaseSchedule) : NULL;
+      $magazine->release_schedule = (isset($data->releaseSchedule)) ? $data->releaseSchedule : NULL;
       $magazine->website = (isset($data->website)) ? $data->website : NULL;
       $magazine->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
       $magazine->created = date("Y-m-d H:i:s");
@@ -109,16 +109,44 @@ class Magazine extends REST_Controller {
     }
   }
 
-  public function publisher_get() {
-    $publishers = $this->publishers->order_by('name', 'ASC')->getAll();
-    if ($publishers) {
-      header('X-TOTAL-ROWS: ' . $this->publishers->countAll());
-      $this->response($publishers, REST_Controller::HTTP_OK);
+  public function search_get() {
+
+    if ($this->get('q') != NULL) {
+      $q = $this->get('q');
+
+      if (strlen($q) > 35) {
+        $q = substr($q, -35);
+      }
+
+      $magazines= $this->magazines->searchMagazines($q);
+
+      $this->set_response($magazines, REST_Controller::HTTP_OK);
     } else {
       $this->response([
         'status' => FALSE,
-        'message' => 'No publishers were found'
-      ], REST_Controller::HTTP_NOT_FOUND);
+        'message' => 'Parameter required'
+      ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+    }
+
+  }
+
+  public function publisher_get() {
+
+    if ($this->get('q') != NULL) {
+      $q = $this->get('q');
+
+      if (strlen($q) > 35) {
+        $q = substr($q, -35);
+      }
+
+      $publishers = $this->publishers->searchPublisher($q);
+
+      $this->set_response($publishers, REST_Controller::HTTP_OK);
+    } else {
+      $this->response([
+        'status' => FALSE,
+        'message' => 'Parameter required'
+      ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
     }
   }
 }

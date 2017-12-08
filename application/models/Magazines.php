@@ -47,4 +47,39 @@ class Magazines extends MY_Model {
 
 		return $seriesArray;
 	}
+
+	/*
+	 * Query para la búsqueda de revistas por su nombre
+	 *
+	 * @autor dvaJi
+	*/
+	public function searchMagazines($q) {
+		$this->db->select('magazines.id, magazines.name, magazines.stub, magazines.uniqid, GROUP_CONCAT(magazines_covers.filename) AS covers');
+    $this->db->from('magazines');
+    $this->db->join('magazines_covers', 'magazines.id = magazines_covers.id_magazine', 'left');
+		$this->db->like('magazines.name', $q);
+		$this->db->group_by("magazines.id");
+    $query = $this->db->get();
+		$result = $query->result();
+
+    if (!empty($result)) {
+			foreach ($result as $key => $value) {
+
+				if ($value->covers != NULL) {
+					$covers = explode(',', $value->covers);
+					$value->covers = array_values(array_unique($covers));
+					$value->covers = $value->image_url_full = "/api/content/magazine/" . $value->stub . "_" . $value->uniqid ."/" . $value->covers[0];
+
+				} else {
+					$value->covers = 'default.png';
+					$value->image_url_full = "/api/content/magazine/" . $value->covers;
+				}
+
+			}
+      return $result;
+    } else {
+      return $result;
+    }
+	}
+
 }

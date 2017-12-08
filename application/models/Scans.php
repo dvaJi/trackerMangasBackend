@@ -55,4 +55,38 @@ class Scans extends MY_Model {
 
 		return $releasesArray;
 	}
+
+	/*
+	 * Query para la búsqueda de scans por su nombre
+	 *
+	 * @autor dvaJi
+	*/
+	public function searchScans($q) {
+		$this->db->select('scans.id, scans.name, scans.stub, scans.uniqid, GROUP_CONCAT(scans_covers.filename) AS covers');
+    $this->db->from('scans');
+    $this->db->join('scans_covers', 'scans.id = scans_covers.id_scans', 'left');
+		$this->db->like('scans.name', $q);
+		$this->db->group_by("scans.id");
+    $query = $this->db->get();
+		$result = $query->result();
+
+    if (!empty($result)) {
+			foreach ($result as $key => $value) {
+
+				if ($value->covers != NULL) {
+					$covers = explode(',', $value->covers);
+					$value->covers = array_values(array_unique($covers));
+					$value->covers = $value->image_url_full = "/api/content/scans/" . $value->stub . "_" . $value->uniqid ."/" . $value->covers[0];
+
+				} else {
+					$value->covers = 'default.png';
+					$value->image_url_full = "/api/content/scans/" . $value->covers;
+				}
+
+			}
+      return $result;
+    } else {
+      return $result;
+    }
+	}
 }

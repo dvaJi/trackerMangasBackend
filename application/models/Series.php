@@ -241,6 +241,41 @@ class Series extends MY_Model {
 	}
 
 	/*
+	 * Query para la búsqueda de series por su nombre
+	 *
+	 * @autor dvaJi
+	*/
+	public function searchSeries($q) {
+		$this->db->select('series.id, associated_names_series.name, series.stub, series.uniqid, GROUP_CONCAT(serie_covers.filename) AS covers');
+    $this->db->from('associated_names_series');
+    $this->db->join('series', 'series.id = associated_names_series.id_series');
+		$this->db->join('serie_covers', 'serie_covers.id_series = series.id', 'left');
+		$this->db->like('associated_names_series.name', $q);
+		$this->db->group_by("associated_names_series.name");
+    $query = $this->db->get();
+		$result = $query->result();
+
+    if (!empty($result)) {
+			foreach ($result as $key => $value) {
+
+				if ($value->covers != NULL) {
+					$covers = explode(',', $value->covers);
+					$value->covers = array_values(array_unique($covers));
+					$value->covers = $value->image_url_full = "/api/content/series/" . $value->stub . "_" . $value->uniqid ."/" . $value->covers[0];
+
+				} else {
+					$value->covers = 'default.png';
+					$value->image_url_full = "/api/content/series/" . $value->covers;
+				}
+
+			}
+      return $result;
+    } else {
+      return $result;
+    }
+	}
+
+	/*
 	* Validar Order
 	*
 	* @autor dvaJi

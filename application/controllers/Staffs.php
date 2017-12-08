@@ -71,6 +71,27 @@ class Staffs extends REST_Controller {
 
   }
 
+  public function search_get() {
+
+    if ($this->get('q') != NULL) {
+      $q = $this->get('q');
+
+      if (strlen($q) > 30) {
+        $q = substr($q, -30);
+      }
+
+      $staff = $this->staffaltnames->getStaffByName($q);
+
+      $this->set_response($staff, REST_Controller::HTTP_OK);
+    } else {
+      $this->response([
+        'status' => FALSE,
+        'message' => 'No staffs were found'
+      ], REST_Controller::HTTP_NOT_FOUND);
+    }
+
+  }
+
   public function index_post() {
     $data = json_decode(file_get_contents('php://input'));
 

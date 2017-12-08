@@ -293,4 +293,25 @@ class Serie extends REST_Controller {
     }
   }
 
+  public function search_get() {
+
+    if ($this->get('q') != NULL) {
+      $q = $this->get('q');
+
+      if (strlen($q) > 35) {
+        $q = substr($q, -35);
+      }
+
+      $series = $this->series->searchSeries($q);
+
+      $this->set_response($series, REST_Controller::HTTP_OK);
+    } else {
+      $this->response([
+        'status' => FALSE,
+        'message' => 'Parameter required'
+      ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+    }
+
+  }
+
 }

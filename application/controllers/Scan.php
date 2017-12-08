@@ -111,4 +111,25 @@ class Scan extends REST_Controller {
     }
   }
 
+  public function search_get() {
+
+    if ($this->get('q') != NULL) {
+      $q = $this->get('q');
+
+      if (strlen($q) > 35) {
+        $q = substr($q, -35);
+      }
+
+      $scans= $this->scans->searchScans($q);
+
+      $this->set_response($scans, REST_Controller::HTTP_OK);
+    } else {
+      $this->response([
+        'status' => FALSE,
+        'message' => 'Parameter required'
+      ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+    }
+
+  }
+
 }
