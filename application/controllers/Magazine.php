@@ -58,95 +58,99 @@ class Magazine extends REST_Controller {
   }
 
   public function index_post() {
-    $data = json_decode(file_get_contents('php://input'));
-
-    try {
-      $magazine = new \stdClass;
-
-      $magazine->name = $data->name;
-      $magazine->stub = url_title($data->name, 'underscore', TRUE);
-      if ($magazine->stub == NULL) {
-        throw new RuntimeException("No se ha ingresado un nombre.");
-      }
-      $magazine->uniqid = uniqid();
-      $magazine->native_name = (isset($data->nameAltInput)) ? $data->nameAltInput : NULL;
-      $magazine->id_publisher = (isset($data->publisher)) ? intval($data->publisher->id) : NULL;
-      $magazine->description = (isset($data->description)) ? $data->description : NULL;
-      if (isset($data->circulation)) {
-        $magazine->circulation = $data->circulation->year . "-" . $data->circulation->month . "-" . $data->circulation->day;
-      }
-      $magazine->release_schedule = (isset($data->releaseSchedule)) ? $data->releaseSchedule : NULL;
-      $magazine->website = (isset($data->website)) ? $data->website : NULL;
-      $magazine->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
-      $magazine->created = date("Y-m-d H:i:s");
-      $magazine->updated = date("Y-m-d H:i:s");
-
-      $result = $this->magazines->insert($magazine);
-      if ($result->status !== true) {
-        throw new RuntimeException($result);
-      }
-
-      $magazine->id = $result->id;
-
-      // Covers
-      if (isset($data->cover) && $data->cover != NULL) {
-        $covers = $this->covers_model->uploadCover($magazine, 'magazine', 'id_magazine', $data->cover);
-        $this->magazinescovers->insertBatch($covers);
-      }
-
-      $response = [
-        'status' => TRUE,
-        'message' => 'Revista creada con éxito.',
-      ];
-      $this->set_response($response, REST_Controller::HTTP_CREATED);
-
-    } catch (Exception $e) {
-      $response = [
-        'status' => FALSE,
-        'message' => $e->getMessage(),
-      ];
-      $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
-    }
-  }
-
-  public function search_get() {
-
-    if ($this->get('q') != NULL) {
-      $q = $this->get('q');
-
-      if (strlen($q) > 35) {
-        $q = substr($q, -35);
-      }
-
-      $magazines= $this->magazines->searchMagazines($q);
-
-      $this->set_response($magazines, REST_Controller::HTTP_OK);
+    if(!Authorization::tokenIsExist($this->headers)) {
+      $this->response('Token not found', REST_Controller::HTTP_UNAUTHORIZED);
     } else {
-      $this->response([
-        'status' => FALSE,
-        'message' => 'Parameter required'
-      ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+      try {
+        $token = Authorization::getBearerToken();
+        $token = Authorization::validateToken($token);
+
+        $data = json_decode(file_get_contents('php://input'));
+        $magazine = new \stdClass;
+
+        $magazine->name = $data->name;
+        $magazine->stub = url_title($data->name, 'underscore', TRUE);
+        if ($magazine->stub == NULL) {
+          throw new RuntimeException("No se ha ingresado un nombre.");
+        }
+        $magazine->uniqid = uniqid();
+        $magazine->native_name = (isset($data->nameAltInput)) ? $data->nameAltInput : NULL;
+        $magazine->id_publisher = (isset($data->publisher)) ? intval($data->publisher->id) : NULL;
+        $magazine->description = (isset($data->description)) ? $data->description : NULL;
+        if (isset($data->circulation)) {
+          $magazine->circulation = $data->circulation->year . "-" . $data->circulation->month . "-" . $data->circulation->day;
+        }
+        $magazine->release_schedule = (isset($data->releaseSchedule)) ? $data->releaseSchedule : NULL;
+        $magazine->website = (isset($data->website)) ? $data->website : NULL;
+        $magazine->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
+        $magazine->created = date("Y-m-d H:i:s");
+        $magazine->updated = date("Y-m-d H:i:s");
+
+        $result = $this->magazines->insert($magazine);
+        if ($result->status !== true) {
+          throw new RuntimeException($result);
+        }
+
+        $magazine->id = $result->id;
+
+        // Covers
+        if (isset($data->cover) && $data->cover != NULL) {
+          $covers = $this->covers_model->uploadCover($magazine, 'magazine', 'id_magazine', $data->cover);
+          $this->magazinescovers->insertBatch($covers);
+        }
+
+        $response = [
+          'status' => TRUE,
+          'message' => 'Revista creada con éxito.',
+        ];
+        $this->set_response($response, REST_Controller::HTTP_CREATED);
+      } catch (Exception $e) {
+        $response = [
+          'status' => FALSE,
+          'message' => $e->getMessage(),
+        ];
+        $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+      }
     }
 
-  }
+    public function search_get() {
 
-  public function publisher_get() {
+      if ($this->get('q') != NULL) {
+        $q = $this->get('q');
 
-    if ($this->get('q') != NULL) {
-      $q = $this->get('q');
+        if (strlen($q) > 35) {
+          $q = substr($q, -35);
+        }
 
-      if (strlen($q) > 35) {
-        $q = substr($q, -35);
+        $magazines= $this->magazines->searchMagazines($q);
+
+        $this->set_response($magazines, REST_Controller::HTTP_OK);
+      } else {
+        $this->response([
+          'status' => FALSE,
+          'message' => 'Parameter required'
+        ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
       }
 
-      $publishers = $this->publishers->searchPublisher($q);
+    }
 
-      $this->set_response($publishers, REST_Controller::HTTP_OK);
-    } else {
-      $this->response([
-        'status' => FALSE,
-        'message' => 'Parameter required'
-      ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+    public function publisher_get() {
+
+      if ($this->get('q') != NULL) {
+        $q = $this->get('q');
+
+        if (strlen($q) > 35) {
+          $q = substr($q, -35);
+        }
+
+        $publishers = $this->publishers->searchPublisher($q);
+
+        $this->set_response($publishers, REST_Controller::HTTP_OK);
+      } else {
+        $this->response([
+          'status' => FALSE,
+          'message' => 'Parameter required'
+        ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+      }
     }
   }
-}

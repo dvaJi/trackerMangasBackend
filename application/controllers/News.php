@@ -21,58 +21,53 @@ class News extends REST_Controller {
   }
 
   public function index_get() {
-    if(!Authorization::tokenIsExist($this->headers)) {
-      $this->response('Token not found', REST_Controller::HTTP_BAD_REQUEST);
-    } else {
-      try {
-        $token = Authorization::getBearerToken();
-        $token = Authorization::validateToken($token);
 
-        if ($this->get('id') != NULL) {
-          // DETALLE
-          $id = $this->get('id');
-          $stub = $this->get('stub');
-          $conditions = array('id' => $id, 'stub' => $stub);
+    try {
+      
+      if ($this->get('id') != NULL) {
+        // DETALLE
+        $id = $this->get('id');
+        $stub = $this->get('stub');
+        $conditions = array('id' => $id, 'stub' => $stub);
 
-          $news = $this->news_model->relate()->find($conditions);
-          $news->image = "/api/content/news/" . $news->image;
+        $news = $this->news_model->relate()->find($conditions);
+        $news->image = "/api/content/news/" . $news->image;
 
-          if ($news != null) {
-            $this->set_response($news, REST_Controller::HTTP_OK);
-
-          } else {
-            $this->set_response([
-              'status' => FALSE,
-              'message' => 'News could not be found'
-            ], REST_Controller::HTTP_NOT_FOUND);
-          }
+        if ($news != null) {
+          $this->set_response($news, REST_Controller::HTTP_OK);
 
         } else {
-
-          $news = $this->news_model->relate()->where('active', 1)->order_by('created', 'DESC')->paginate(5);
-          foreach ($news as $key => $value) {
-            $value->image = "/api/content/news/" . $value->image;
-          }
-
-          if ($news) {
-            header('X-TOTAL-ROWS: ' . $this->news_model->countAll());
-            $this->response($news, REST_Controller::HTTP_OK);
-          } else {
-            $this->response([
-              'status' => FALSE,
-              'message' => 'No News were found'
-            ], REST_Controller::HTTP_NOT_FOUND);
-          }
+          $this->set_response([
+            'status' => FALSE,
+            'message' => 'News could not be found'
+          ], REST_Controller::HTTP_NOT_FOUND);
         }
 
-      } catch (Exception $e) {
-        $response = [
-          'status' => FALSE,
-          'message' => $e->getMessage(),
-        ];
-        $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+      } else {
 
+        $news = $this->news_model->relate()->where('active', 1)->order_by('created', 'DESC')->paginate(5);
+        foreach ($news as $key => $value) {
+          $value->image = "/api/content/news/" . $value->image;
+        }
+
+        if ($news) {
+          header('X-TOTAL-ROWS: ' . $this->news_model->countAll());
+          $this->response($news, REST_Controller::HTTP_OK);
+        } else {
+          $this->response([
+            'status' => FALSE,
+            'message' => 'No News were found'
+          ], REST_Controller::HTTP_NOT_FOUND);
+        }
       }
+
+    } catch (Exception $e) {
+      $response = [
+        'status' => FALSE,
+        'message' => $e->getMessage(),
+      ];
+      $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+
     }
   }
 

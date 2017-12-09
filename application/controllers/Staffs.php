@@ -86,79 +86,84 @@ class Staffs extends REST_Controller {
     } else {
       $this->response([
         'status' => FALSE,
-        'message' => 'No staffs were found'
-      ], REST_Controller::HTTP_NOT_FOUND);
+        'message' => 'Parameter required'
+      ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
     }
 
   }
 
   public function index_post() {
-    $data = json_decode(file_get_contents('php://input'));
+    if(!Authorization::tokenIsExist($this->headers)) {
+      $this->response('Token not found', REST_Controller::HTTP_UNAUTHORIZED);
+    } else {
+      try {
+        $token = Authorization::getBearerToken();
+        $token = Authorization::validateToken($token);
+        $data = json_decode(file_get_contents('php://input'));
+        $staff = new \stdClass;
 
-    try {
-      $staff = new \stdClass;
-
-      $staff->stub = url_title($data->name, 'underscore', TRUE);
-      if ($staff->stub == NULL) {
-        throw new RuntimeException("No se ha ingresado un nombre.");
-      }
-      $staff->uniqid = uniqid();
-      $staff->birth_place = (isset($data->birthPlace)) ? $data->birthPlace : NULL;
-      if (isset($data->birthDate)) {
-        $staff->birth_date = $data->birthDate->year . "-" . $data->birthDate->month . "-" . $data->birthDate->day;
-      }
-      $staff->gender = (isset($data->gender)) ? intval($data->gender) : NULL;
-      $staff->description = (isset($data->description)) ? $data->description : NULL;
-      $staff->website = (isset($data->website)) ? $data->website : NULL;
-      $staff->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
-      $staff->pixiv = (isset($data->pixiv)) ? $data->pixiv : NULL;
-      $staff->created = date("Y-m-d H:i:s");
-      $staff->updated = date("Y-m-d H:i:s");
-
-      $result = $this->staff->insert($staff);
-      if ($result->status !== true) {
-        throw new RuntimeException($result);
-      }
-      $staff->id = $result->id;
-
-      // Covers
-      if (isset($data->cover) && $data->cover != NULL) {
-        $covers = $this->covers_model->uploadCover($staff, 'staff', 'id_staff', $data->cover);
-        $this->staffcovers->insertBatch($covers);
-      }
-
-      // Nombres Alt.
-      $nombresAlt = array();
-      $nombresAltObj = new \stdClass;
-      $nombresAltObj->id_staff = $staff->id;
-      $nombresAltObj->name = $data->name;
-      $nombresAltObj->def = 1;
-      array_push($nombresAlt, $nombresAltObj);
-
-      if (! empty($data->altNames)) {
-        foreach ($data->altNames as $key => $altNames) {
-          $nombresAltObj = new \stdClass;
-          $nombresAltObj->id_staff = $staff->id;
-          $nombresAltObj->name = $altNames->value;
-          $nombresAltObj->def = 0;
-          array_push($nombresAlt, $nombresAltObj);
+        $staff->stub = url_title($data->name, 'underscore', TRUE);
+        if ($staff->stub == NULL) {
+          throw new RuntimeException("No se ha ingresado un nombre.");
         }
+        $staff->uniqid = uniqid();
+        $staff->birth_place = (isset($data->birthPlace)) ? $data->birthPlace : NULL;
+        if (isset($data->birthDate)) {
+          $staff->birth_date = $data->birthDate->year . "-" . $data->birthDate->month . "-" . $data->birthDate->day;
+        }
+        $staff->gender = (isset($data->gender)) ? intval($data->gender) : NULL;
+        $staff->description = (isset($data->description)) ? $data->description : NULL;
+        $staff->website = (isset($data->website)) ? $data->website : NULL;
+        $staff->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
+        $staff->pixiv = (isset($data->pixiv)) ? $data->pixiv : NULL;
+        $staff->created = date("Y-m-d H:i:s");
+        $staff->updated = date("Y-m-d H:i:s");
+
+        $result = $this->staff->insert($staff);
+        if ($result->status !== true) {
+          throw new RuntimeException($result);
+        }
+        $staff->id = $result->id;
+
+        // Covers
+        if (isset($data->cover) && $data->cover != NULL) {
+          $covers = $this->covers_model->uploadCover($staff, 'staff', 'id_staff', $data->cover);
+          $this->staffcovers->insertBatch($covers);
+        }
+
+        // Nombres Alt.
+        $nombresAlt = array();
+        $nombresAltObj = new \stdClass;
+        $nombresAltObj->id_staff = $staff->id;
+        $nombresAltObj->name = $data->name;
+        $nombresAltObj->def = 1;
+        array_push($nombresAlt, $nombresAltObj);
+
+        if (! empty($data->altNames)) {
+          foreach ($data->altNames as $key => $altNames) {
+            $nombresAltObj = new \stdClass;
+            $nombresAltObj->id_staff = $staff->id;
+            $nombresAltObj->name = $altNames->value;
+            $nombresAltObj->def = 0;
+            array_push($nombresAlt, $nombresAltObj);
+          }
+        }
+
+        $this->staffaltnames->insertBatch($nombresAlt);
+
+        $response = [
+          'status' => TRUE,
+          'message' => 'Staff creado con éxito.',
+        ];
+        $this->set_response($response, REST_Controller::HTTP_CREATED);
+
+      } catch (Exception $e) {
+        $response = [
+          'status' => FALSE,
+          'message' => $e->getMessage(),
+        ];
+        $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
       }
-
-      $this->staffaltnames->insertBatch($nombresAlt);
-
-      $response = [
-        'status' => TRUE,
-        'message' => 'Staff creado con éxito.',
-      ];
-      $this->set_response($response, REST_Controller::HTTP_CREATED);
-
-    } catch (Exception $e) {
-      $response = [
-        'status' => FALSE,
-        'message' => $e->getMessage(),
-      ];
-      $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
     }
   }
 }
