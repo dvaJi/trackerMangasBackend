@@ -62,9 +62,16 @@ class Scan extends REST_Controller {
   }
 
   public function index_post() {
-    $data = json_decode(file_get_contents('php://input'));
-
     try {
+      if(!Authorization::tokenIsExist($this->headers)) {
+        throw new RuntimeException('Token not found.');
+      }
+
+      // Obtener el token para validar y obtener el usuario.
+      $token = Authorization::getBearerToken();
+      $token = Authorization::validateToken($token);
+      
+      $data = json_decode(file_get_contents('php://input'));
       $scan = new \stdClass;
 
       $scan->name = $data->name;

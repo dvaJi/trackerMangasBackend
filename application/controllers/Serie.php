@@ -34,75 +34,70 @@ class Serie extends REST_Controller {
   * @author          DvaJi
   */
   public function list_get() {
-    if(!Authorization::tokenIsExist($this->headers)) {
-      $this->response('Token not found', REST_Controller::HTTP_BAD_REQUEST);
-    } else {
-      try {
-        $token = Authorization::getBearerToken();
-        $token = Authorization::validateToken($token);
-        $id = $this->get('id');
-        // If the id parameter doesn't exist return all the series
-        if ($id === NULL) {
-          $this->load->model('releases');
-          $this->load->model('scans');
-          $this->load->model('staffaltnames');
+    try {
+      /*$token = Authorization::getBearerToken();
+      $token = Authorization::validateToken($token);*/
+      $id = $this->get('id');
+      // If the id parameter doesn't exist return all the series
+      if ($id === NULL) {
+        $this->load->model('releases');
+        $this->load->model('scans');
+        $this->load->model('staffaltnames');
 
-          // Filtros
-          $periodo = $this->get('time'); // weekly, monthly, anually, historic
-          $order = $this->get('order');
-          $limit = 10;
-          // no puede sobrepasar los 15
-          if (!$this->get('limit') == NULL) {
-            $limit = ($this->get('limit') > 15) ? 15 : $this->get('limit');
+        // Filtros
+        $periodo = $this->get('time'); // weekly, monthly, anually, historic
+        $order = $this->get('order');
+        $limit = 10;
+        // no puede sobrepasar los 15
+        if (!$this->get('limit') == NULL) {
+          $limit = ($this->get('limit') > 15) ? 15 : $this->get('limit');
+        }
+        $tipo = $this->get('type');
+        $page = ($this->get('page') === NULL) ? 1 : $this->get('page');
+
+        // Validar si existen type y order
+        if ($tipo == NULL || $this->series->validateType($tipo) || $order == NULL || $this->series->validateOrder($order)) {
+          throw new RuntimeException("El parámetro no existe.");
+        }
+
+        $where = array(
+          'type' => $tipo
+        );
+
+        $series = $this->series->relate()->where($where)->order_by($order, 'DESC')->paginate($limit, (int) $page);
+
+        if ($series) {
+          foreach ($series as $key => $serie) {
+            $serie->name = $this->series->getDefaultName($serie->names);
+            $serie->names = $this->series->getNames($serie->names);
+            $serie->genres = $this->series->getGenres($serie->genres);
+            $serie->staff = $this->series->getStaff($serie->staff);
+            $serie->magazines = $this->series->getMagazines($serie->magazines);
+            $serie->releases = $this->series->getReleases($this->releases->relate()->getWhere(['series_id' => $serie->id]));
+            $serie->cover = $this->series->getCovers($serie->cover, $serie);
+            $serie->loading = false;
           }
-          $tipo = $this->get('type');
-          $page = ($this->get('page') === NULL) ? 1 : $this->get('page');
+          $this->response($series, REST_Controller::HTTP_OK);
 
-          // Validar si existen type y order
-          if ($tipo == NULL || $this->series->validateType($tipo) || $order == NULL || $this->series->validateOrder($order)) {
-            throw new RuntimeException("El parámetro no existe.");
-          }
-
-          $where = array(
-            'type' => $tipo
-          );
-
-          $series = $this->series->relate()->where($where)->order_by($order, 'DESC')->paginate($limit, (int) $page);
-
-          if ($series) {
-            foreach ($series as $key => $serie) {
-              $serie->name = $this->series->getDefaultName($serie->names);
-              $serie->names = $this->series->getNames($serie->names);
-              $serie->genres = $this->series->getGenres($serie->genres);
-              $serie->staff = $this->series->getStaff($serie->staff);
-              $serie->magazines = $this->series->getMagazines($serie->magazines);
-              $serie->releases = $this->series->getReleases($this->releases->relate()->getWhere(['series_id' => $serie->id]));
-              $serie->cover = $this->series->getCovers($serie->cover, $serie);
-              $serie->loading = false;
-            }
-            $this->response($series, REST_Controller::HTTP_OK);
-
-          } else {
-            $this->response([
-              'status' => FALSE,
-              'message' => 'No series were found'
-            ], REST_Controller::HTTP_NOT_FOUND);
-
-          }
         } else {
-          $this->response(NULL, REST_Controller::HTTP_BAD_REQUEST);
+          $this->response([
+            'status' => FALSE,
+            'message' => 'No series were found'
+          ], REST_Controller::HTTP_NOT_FOUND);
 
         }
-      } catch (Exception $e) {
-        $response = [
-          'status' => FALSE,
-          'message' => $e->getMessage(),
-        ];
-        $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+      } else {
+        $this->response(NULL, REST_Controller::HTTP_BAD_REQUEST);
 
       }
-    }
+    } catch (Exception $e) {
+      $response = [
+        'status' => FALSE,
+        'message' => $e->getMessage(),
+      ];
+      $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
 
+    }
   }
 
   /**
@@ -111,13 +106,8 @@ class Serie extends REST_Controller {
   * @author          DvaJi
   */
   public function page_get() {
-    if(!Authorization::tokenIsExist($this->headers)) {
-      $this->response('Token not found', REST_Controller::HTTP_BAD_REQUEST);
-    } else {
       try {
 
-        $token = Authorization::getBearerToken();
-        $token = Authorization::validateToken($token);
         $id = $this->get('id');
 
         $this->load->model('releases');
@@ -163,7 +153,6 @@ class Serie extends REST_Controller {
         ];
         $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
       }
-    }
   }
 
   /**
@@ -175,9 +164,17 @@ class Serie extends REST_Controller {
     $this->load->model('seriegenres');
     $this->load->model('covers_model');
 
-    $data = json_decode(file_get_contents('php://input'));
-
     try {
+
+      if(!Authorization::tokenIsExist($this->headers)) {
+        throw new RuntimeException('Token not found.');
+      }
+
+      // Obtener el token para validar y obtener el usuario.
+      $token = Authorization::getBearerToken();
+      $token = Authorization::validateToken($token);
+
+      $data = json_decode(file_get_contents('php://input'));
       $serie = new \stdClass;
 
       $serie->stub = url_title($data->name, 'underscore', TRUE);
@@ -252,6 +249,7 @@ class Serie extends REST_Controller {
           array_push($staff, $authorObj);
         }
       }
+
       if (! empty($data->artist)) {
         foreach ($data->artist as $key => $artist) {
           $artistObj = new \stdClass;
@@ -261,6 +259,7 @@ class Serie extends REST_Controller {
           array_push($staff, $artistObj);
         }
       }
+
       if (! empty($staff)) {
         $this->seriestaff->insertBatch($staff);
       }

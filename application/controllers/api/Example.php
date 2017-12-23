@@ -23,7 +23,6 @@ class Example extends REST_Controller {
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->helper('url');
 
         // Configure limits on our controller methods
         // Ensure you have created the 'limits' table and enabled 'limits' within application/config/rest.php
@@ -32,15 +31,9 @@ class Example extends REST_Controller {
         $this->methods['users_delete']['limit'] = 50; // 50 requests per hour per user/key
     }
 
-    public function series_get() {
-
-    }
-
     public function users_get()
     {
         // Users from a data store e.g. database
-        $this->load->helper('url');
-        $this->load->database();
         $users = [
             ['id' => 1, 'name' => 'John', 'email' => 'john@example.com', 'fact' => 'Loves coding'],
             ['id' => 2, 'name' => 'Jim', 'email' => 'jim@example.com', 'fact' => 'Developed on CodeIgniter'],
@@ -56,9 +49,8 @@ class Example extends REST_Controller {
             // Check if the users data store contains users (in case the database result returns NULL)
             if ($users)
             {
-                $this->load->model('series');
                 // Set the response and exit
-                $this->response($this->series->relate()->find(2), REST_Controller::HTTP_OK); // OK (200) being the HTTP response code
+                $this->response($users, REST_Controller::HTTP_OK); // OK (200) being the HTTP response code
             }
             else
             {

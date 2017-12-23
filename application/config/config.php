@@ -24,7 +24,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 $config['base_url'] = '';
-
+$config['base_url_fe'] = 'http://localhost:4200/';
+$config['site__name']= 'TrackerMangas';
 /*
 |--------------------------------------------------------------------------
 | Index File
@@ -76,7 +77,7 @@ $config['url_suffix'] = '';
 | than english.
 |
 */
-$config['language']	= 'english';
+$config['language']	= 'spanish';
 
 /*
 |--------------------------------------------------------------------------
@@ -453,7 +454,7 @@ $config['csrf_token_name'] = 'csttm';
 $config['csrf_cookie_name'] = 'csctm';
 $config['csrf_expire'] = 7200;
 $config['csrf_regenerate'] = TRUE;
-$config['csrf_exclude_uris'] = array();
+$config['csrf_exclude_uris'] = array('auth/login', 'auth/register', 'auth/forgot', 'auth/reset_password', 'poll', 'magazine', 'release', 'staffs', 'serie', 'scan');
 
 /*
 |--------------------------------------------------------------------------

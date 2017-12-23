@@ -6,6 +6,8 @@ require APPPATH . 'libraries/REST_Controller.php';
 
 class Magazine extends REST_Controller {
 
+  protected $headers;
+
   function __construct() {
     // Construct the parent class
     parent::__construct();
@@ -15,6 +17,8 @@ class Magazine extends REST_Controller {
     $this->load->model('publishers');
     $this->load->model('magazinescovers');
     $this->load->model('covers_model');
+
+    $this->headers = apache_request_headers();
 
     //$this->methods['get_get']['limit'] = 500; // 500 requests per hour per user/key
     //$this->methods['enviar_post']['limit'] = 100; // 100 requests per hour per user/key
@@ -58,99 +62,115 @@ class Magazine extends REST_Controller {
   }
 
   public function index_post() {
-    if(!Authorization::tokenIsExist($this->headers)) {
-      $this->response('Token not found', REST_Controller::HTTP_UNAUTHORIZED);
-    } else {
-      try {
-        $token = Authorization::getBearerToken();
-        $token = Authorization::validateToken($token);
+    try {
 
-        $data = json_decode(file_get_contents('php://input'));
-        $magazine = new \stdClass;
-
-        $magazine->name = $data->name;
-        $magazine->stub = url_title($data->name, 'underscore', TRUE);
-        if ($magazine->stub == NULL) {
-          throw new RuntimeException("No se ha ingresado un nombre.");
-        }
-        $magazine->uniqid = uniqid();
-        $magazine->native_name = (isset($data->nameAltInput)) ? $data->nameAltInput : NULL;
-        $magazine->id_publisher = (isset($data->publisher)) ? intval($data->publisher->id) : NULL;
-        $magazine->description = (isset($data->description)) ? $data->description : NULL;
-        if (isset($data->circulation)) {
-          $magazine->circulation = $data->circulation->year . "-" . $data->circulation->month . "-" . $data->circulation->day;
-        }
-        $magazine->release_schedule = (isset($data->releaseSchedule)) ? $data->releaseSchedule : NULL;
-        $magazine->website = (isset($data->website)) ? $data->website : NULL;
-        $magazine->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
-        $magazine->created = date("Y-m-d H:i:s");
-        $magazine->updated = date("Y-m-d H:i:s");
-
-        $result = $this->magazines->insert($magazine);
-        if ($result->status !== true) {
-          throw new RuntimeException($result);
-        }
-
-        $magazine->id = $result->id;
-
-        // Covers
-        if (isset($data->cover) && $data->cover != NULL) {
-          $covers = $this->covers_model->uploadCover($magazine, 'magazine', 'id_magazine', $data->cover);
-          $this->magazinescovers->insertBatch($covers);
-        }
-
-        $response = [
-          'status' => TRUE,
-          'message' => 'Revista creada con éxito.',
-        ];
-        $this->set_response($response, REST_Controller::HTTP_CREATED);
-      } catch (Exception $e) {
-        $response = [
-          'status' => FALSE,
-          'message' => $e->getMessage(),
-        ];
-        $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
-      }
-    }
-
-    public function search_get() {
-
-      if ($this->get('q') != NULL) {
-        $q = $this->get('q');
-
-        if (strlen($q) > 35) {
-          $q = substr($q, -35);
-        }
-
-        $magazines= $this->magazines->searchMagazines($q);
-
-        $this->set_response($magazines, REST_Controller::HTTP_OK);
-      } else {
-        $this->response([
-          'status' => FALSE,
-          'message' => 'Parameter required'
-        ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+      if(!Authorization::tokenIsExist($this->headers)) {
+        throw new RuntimeException('Token not found.');
       }
 
-    }
+      // Obtener el token para validar y obtener el usuario.
+      $token = Authorization::getBearerToken();
+      $token = Authorization::validateToken($token);
 
-    public function publisher_get() {
+      $data = json_decode(file_get_contents('php://input'));
+      $magazine = new \stdClass;
 
-      if ($this->get('q') != NULL) {
-        $q = $this->get('q');
+      $magazine->name = $data->name;
+      $magazine->stub = url_title($data->name, 'underscore', TRUE);
 
-        if (strlen($q) > 35) {
-          $q = substr($q, -35);
-        }
-
-        $publishers = $this->publishers->searchPublisher($q);
-
-        $this->set_response($publishers, REST_Controller::HTTP_OK);
-      } else {
-        $this->response([
-          'status' => FALSE,
-          'message' => 'Parameter required'
-        ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+      // El nombre debe ser obligatorio, por lo tanto el stub tambien.
+      if ($magazine->stub == NULL) {
+        throw new RuntimeException("No se ha ingresado un nombre.");
       }
+
+      $magazine->uniqid = uniqid();
+      $magazine->native_name = (isset($data->nameAltInput)) ? $data->nameAltInput : NULL;
+      $magazine->id_publisher = (isset($data->publisher)) ? intval($data->publisher->id) : NULL;
+      $magazine->description = (isset($data->description)) ? $data->description : NULL;
+
+      if (isset($data->circulation) && $data->circulation != null) {
+        $magazine->circulation = $data->circulation->year . "-" . $data->circulation->month . "-" . $data->circulation->day;
+      }
+
+      $magazine->release_schedule = (isset($data->releaseSchedule)) ? $data->releaseSchedule : NULL;
+      $magazine->website = (isset($data->website)) ? $data->website : NULL;
+      $magazine->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
+      $magazine->created = date("Y-m-d H:i:s");
+      $magazine->updated = date("Y-m-d H:i:s");
+
+      $result = $this->magazines->insert($magazine);
+
+      if ($result->status !== true) {
+        throw new RuntimeException($result);
+      }
+
+      $magazine->id = $result->id;
+
+      // Covers
+      if (isset($data->cover) && $data->cover != NULL) {
+        $covers = $this->covers_model->uploadCover($magazine, 'magazine', 'id_magazine', $data->cover);
+        $this->magazinescovers->insertBatch($covers);
+      }
+
+      $response = [
+        'status' => TRUE,
+        'message' => 'Revista creada con éxito.',
+      ];
+      $this->set_response($response, REST_Controller::HTTP_CREATED);
+
+    } catch (Exception $e) {
+      $response = [
+        'status' => FALSE,
+        'message' => $e->getMessage(),
+      ];
+      $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
     }
   }
+
+  /*
+  * Obtiene las revistas según su nombre.
+  */
+  public function search_get() {
+
+    if ($this->get('q') != NULL) {
+      $q = $this->get('q');
+
+      if (strlen($q) > 35) {
+        $q = substr($q, -35);
+      }
+
+      $magazines= $this->magazines->searchMagazines($q);
+
+      $this->set_response($magazines, REST_Controller::HTTP_OK);
+    } else {
+      $this->response([
+        'status' => FALSE,
+        'message' => 'Parameter required'
+      ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+    }
+
+  }
+
+  /*
+  * Obtiene las editoriales según su nombre.
+  */
+  public function publisher_get() {
+
+    if ($this->get('q') != NULL) {
+      $q = $this->get('q');
+
+      if (strlen($q) > 35) {
+        $q = substr($q, -35);
+      }
+
+      $publishers = $this->publishers->searchPublisher($q);
+
+      $this->set_response($publishers, REST_Controller::HTTP_OK);
+    } else {
+      $this->response([
+        'status' => FALSE,
+        'message' => 'Parameter required'
+      ], REST_Controller::HTTP_METHOD_NOT_ALLOWED);
+    }
+  }
+}

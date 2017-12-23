@@ -7,10 +7,10 @@ class Covers_model extends MY_Model {
 	/*
 	* Se obtienen las portadas según su tipo
 	* @example
-	* 		1 = original
-	* 		2 = large
-	* 		3 = medium
-	* 		4 = thumb
+	* 		[0] = original
+	* 		[1] = large
+	* 		[2] = medium
+	* 		[3] = thumb
 	*
 	* @autor dvaJi
 	*/
