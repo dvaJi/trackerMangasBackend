@@ -61,8 +61,17 @@ class Magazine extends REST_Controller {
     }
   }
 
+  /**
+	 * POST: index
+   * Crea una nueva revista, pero esta se almacena en
+   * la tabla pending_magazine hasta que se apruebe.
+	 *
+	 * @param $staff
+	 * @author DvaJi
+	 */
   public function index_post() {
     try {
+      $this->load->model('magazines/pendingMagazines', 'pendingMagazines');
 
       if(!Authorization::tokenIsExist($this->headers)) {
         throw new RuntimeException('Token not found.');
@@ -82,7 +91,7 @@ class Magazine extends REST_Controller {
       if ($magazine->stub == NULL) {
         throw new RuntimeException("No se ha ingresado un nombre.");
       }
-
+      $magazine->id_user = $token->id;
       $magazine->uniqid = uniqid();
       $magazine->native_name = (isset($data->nameAltInput)) ? $data->nameAltInput : NULL;
       $magazine->id_publisher = (isset($data->publisher)) ? intval($data->publisher->id) : NULL;
@@ -98,23 +107,108 @@ class Magazine extends REST_Controller {
       $magazine->created = date("Y-m-d H:i:s");
       $magazine->updated = date("Y-m-d H:i:s");
 
+      // Covers
+      if (isset($data->cover) && $data->cover != NULL) {
+        $magazine->cover_filename = $this->covers_model->uploadPendingCover($magazine, 'magazine', 'id_magazine', $data->cover);
+      }
+
+      $result = $this->pendingMagazines->insert($magazine);
+
+      if ($result->status !== true) {
+        throw new RuntimeException($result->message);
+      }
+
+
+
+      $response = [
+        'status' => TRUE,
+        'message' => 'Revista creada con éxito, espere a que nuestro staff lo apruebe.',
+      ];
+      $this->set_response($response, REST_Controller::HTTP_CREATED);
+
+    } catch (Exception $e) {
+      $response = [
+        'status' => FALSE,
+        'message' => $e->getMessage(),
+      ];
+      $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+    }
+  }
+
+  public function aprobar_magazine_get() {
+    try {
+
+      $this->load->model('magazines/pendingMagazines', 'pendingMagazines');
+
+      if(!Authorization::tokenIsExist($this->headers)) {
+        throw new RuntimeException('Token not found.');
+      }
+
+      // Obtener el token para validar y obtener el usuario.
+      $token = Authorization::getBearerToken();
+      $token = Authorization::validateToken($token);
+
+      $user_groups = $this->ion_auth->get_users_groups($token->id)->result();
+
+      // Validar de que el usuario tenga los provilegios para aprobar.
+      $canApproval = FALSE;
+      foreach ($user_groups as $key => $group) {
+        if ($group->name == 'admin') {
+          $canApproval = TRUE;
+        }
+      }
+
+      if (! $canApproval) {
+        throw new RuntimeException('No tienes permisos suficientes para realizar esta acción.');
+      }
+
+      $id = $this->get('id');
+      if ($id === NULL || !is_numeric($id)) {
+        throw new RuntimeException('No se ha ingresado una id válida.');
+      }
+
+      $data = $this->pendingMagazines->relate()->find($id);
+
+      if ($data === NULL || intval($data->status_approval) !== 0) {
+        throw new RuntimeException('No se ha encontrado la revista solicitada.');
+      }
+
+      $magazine = new \stdClass;
+
+      $magazine->name = $data->name;
+      $magazine->stub = $data->stub;
+      $magazine->uniqid = $data->uniqid;
+      $magazine->native_name = (isset($data->native_name)) ? $data->native_name : NULL;
+      $magazine->id_publisher = (isset($data->id_publisher)) ? intval($data->id_publisher) : NULL;
+      $magazine->description = (isset($data->description)) ? $data->description : NULL;
+      $magazine->circulation = $data->circulation;
+      $magazine->release_schedule = (isset($data->release_schedule)) ? $data->release_schedule : NULL;
+      $magazine->website = (isset($data->website)) ? $data->website : NULL;
+      $magazine->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
+      $magazine->created = $data->created;
+      $magazine->updated = date("Y-m-d H:i:s");
+
       $result = $this->magazines->insert($magazine);
 
       if ($result->status !== true) {
-        throw new RuntimeException($result);
+        throw new RuntimeException($result->message);
       }
 
       $magazine->id = $result->id;
 
       // Covers
-      if (isset($data->cover) && $data->cover != NULL) {
-        $covers = $this->covers_model->uploadCover($magazine, 'magazine', 'id_magazine', $data->cover);
+      if (isset($data->cover_filename) && $data->cover_filename != NULL) {
+        $covers = $this->covers_model->MoveCoverAndCreateThumbs($magazine, 'magazine', 'id_magazine', $data->cover_filename);
         $this->magazinescovers->insertBatch($covers);
       }
 
+      // Actualizar el estado de la revista de pending_magazine a aprobado [1]
+      $row = array('status_approval' => 1);
+      $this->pendingMagazines->update($data->id, $row);
+
       $response = [
         'status' => TRUE,
-        'message' => 'Revista creada con éxito.',
+        'message' => 'Revista aprobada con éxito.',
       ];
       $this->set_response($response, REST_Controller::HTTP_CREATED);
 

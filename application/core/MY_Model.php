@@ -252,7 +252,11 @@ class MY_Model extends Pagination {
           $result->id = $return;
           return $result;
         } else {
-          return $error;
+          $result = new \stdClass;
+          $result->status = FALSE;
+          $result->message = $error['message'];
+          $result->code = $error['code'];
+          return $result;
         }
       } else {
         return false;
