@@ -51,6 +51,69 @@ class Release extends REST_Controller {
     }
   }
 
+  public function pending_get() {
+    try {
+      $this->load->model('scans');
+      $this->load->model('releases/pendingReleases', 'pendingReleases');
+
+      if(!Authorization::tokenIsExist($this->headers)) {
+        throw new RuntimeException('Token not found.');
+      }
+
+      // Obtener el token para validar y obtener el usuario.
+      $token = Authorization::getBearerToken();
+      $token = Authorization::validateToken($token);
+
+      $user_groups = $this->ion_auth->get_users_groups($token->id)->result();
+
+      // Validar de que el usuario tenga los provilegios para aprobar.
+      $canApproval = FALSE;
+      foreach ($user_groups as $key => $group) {
+        if ($group->name == 'admin') {
+          $canApproval = TRUE;
+        }
+      }
+
+      if (! $canApproval) {
+        throw new RuntimeException('No tienes permisos suficientes para realizar esta acción.');
+      }
+
+      $id = $this->get('id');
+      $data = NULL;
+      if ($id == NULL || $id == 'undefined') {
+        $conditions = array('status_approval' => 0);
+        $data = $this->pendingReleases->relate()->getWhere($conditions);
+        foreach ($data as $key => $release) {
+          $release->serie = $this->pendingReleases->getSerieName($release->serie);
+          $release->scans = $this->pendingReleases->getGroups($release->scans);
+        }
+      } else {
+        $data = $this->pendingReleases->relate()->find($id);
+        if ($data === NULL || intval($data->status_approval) !== 0) {
+          throw new RuntimeException('No se ha encontrado el release solicitado.');
+        }
+        $data->serie = $this->pendingReleases->getSerieName($data->serie);
+        $data->scans = $this->pendingReleases->getGroups($data->scans);
+      }
+
+      if ($data !== NULL) {
+        $this->set_response($data, REST_Controller::HTTP_OK);
+      } else {
+        $response = [
+          'status' => FALSE,
+          'message' => 'No se encontró ningun Release pendiente.',
+        ];
+        $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+      }
+    } catch (Exception $e) {
+      $response = [
+        'status' => FALSE,
+        'message' => $e->getMessage(),
+      ];
+      $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+    }
+  }
+
   /**
 	 * POST: index
    * Crea un nuevo Release, pero esta se almacena en
@@ -127,7 +190,7 @@ class Release extends REST_Controller {
     }
   }
 
-  public function aprobar_release_get() {
+  public function update_pending_release_get() {
     try {
 
       $this->load->model('releases/pendingReleases', 'pendingReleases');
@@ -163,6 +226,21 @@ class Release extends REST_Controller {
 
       if ($data === NULL || intval($data->status_approval) !== 0) {
         throw new RuntimeException('No se ha encontrado el Release solicitado.');
+      }
+
+      // Comprueba si es aprobado o rechazado
+      $isApproved = ($this->get('status') === 'true');
+      $reason = $this->get('reason');
+      if (! $isApproved) {
+        // Actualizar el estado de la serie de pending_serie a rechazado [-1]
+        $row = array('status_approval' => -1, 'status_reason' => $reason);
+        $this->pendingReleases->update($id, $row);
+
+        $response = [
+          'status' => TRUE,
+          'message' => 'Release rechazado con éxito.',
+        ];
+        $this->response($response, REST_Controller::HTTP_OK);
       }
 
       $release = new \stdClass;

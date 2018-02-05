@@ -52,6 +52,7 @@ class Auth extends REST_Controller {
       $tokenData['iat'] = time();
       $tokenData['exp'] = time() + 30*60*20*32;
       $response['username'] = $data->username;
+      $response['groups'] = $this->ion_auth->get_users_groups($user->id)->result();
       $response['token'] = Authorization::generateToken($tokenData);
       $response['message'] = $this->ion_auth->messages();
       $this->set_response($response, REST_Controller::HTTP_OK);

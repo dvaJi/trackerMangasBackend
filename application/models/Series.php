@@ -138,10 +138,16 @@ class Series extends MY_Model {
 	* @autor dvaJi
 	*/
 	public function getMagazines($magazines) {
+		if (empty($magazine)) return array();
+
 		$magazinesArray = array();
-		foreach ($magazines as $key => $value) {
-			$value = $this->magazines->find($value->id_magazines);
-			array_push($magazinesArray, $value);
+		foreach ($magazines as $key => $magazine) {
+			$magazine = $this->magazines->relate()->find($magazine->id_magazines);
+			if ($magazine->cover != NULL) {
+				$magazine->cover = $this->covers_model->getCovers($magazine, 'magazine', 'id_magazine', $magazine->cover);
+			}
+
+			array_push($magazinesArray, $magazine);
 		}
 
 		return $magazinesArray;
@@ -218,7 +224,7 @@ class Series extends MY_Model {
 		$namesArray = array();
 		foreach ($names as $key => $value) {
 			if ($value->def == 0) {
-				array_push($namesArray, $value->name);
+				array_push($namesArray, $value);
 			}
 		}
 
@@ -237,7 +243,7 @@ class Series extends MY_Model {
 			}
 		}
 
-		return $namesArray;
+		return NULL;
 	}
 
 	/*

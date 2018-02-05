@@ -246,7 +246,7 @@ class MY_Model extends Pagination {
         $return = $this->db->insert_id();
         $error = $this->db->error();
 
-        if ($error['code'] === 0  &&  $return != 0 ) {
+        if (intval($error['code']) === 0  &&  $return != 0 ) {
           $result = new \stdClass;
           $result->status = true;
           $result->id = $return;
@@ -273,7 +273,8 @@ class MY_Model extends Pagination {
     public function insertBatch($data = array()) {
       if(sizeof($data) > 0) {
         $data = $this->filterFillable($data, 'batch');
-        return $this->db->insert_batch($this->table, $data);
+        $result = $this->db->insert_batch($this->table, $data);
+        return $result;
       }
         return false;
     }

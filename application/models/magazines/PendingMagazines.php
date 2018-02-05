@@ -12,6 +12,13 @@ class PendingMagazines extends MY_Model {
 			'foreign'   => 'id',
 			'variable'  => 'user'
 		));
+
+		$this->addRelation(array(
+			'primary'   => 'id_publisher',
+			'table'     => 'publisher',
+			'foreign'   => 'id',
+			'variable'  => 'publisher'
+		));
 	}
 
 }

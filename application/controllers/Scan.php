@@ -65,6 +65,62 @@ class Scan extends REST_Controller {
     }
   }
 
+  public function pending_get() {
+    try {
+      $this->load->model('scans/pendingScans', 'pendingScans');
+
+      if(!Authorization::tokenIsExist($this->headers)) {
+        throw new RuntimeException('Token not found.');
+      }
+
+      // Obtener el token para validar y obtener el usuario.
+      $token = Authorization::getBearerToken();
+      $token = Authorization::validateToken($token);
+
+      $user_groups = $this->ion_auth->get_users_groups($token->id)->result();
+
+      // Validar de que el usuario tenga los provilegios para aprobar.
+      $canApproval = FALSE;
+      foreach ($user_groups as $key => $group) {
+        if ($group->name == 'admin') {
+          $canApproval = TRUE;
+        }
+      }
+
+      if (! $canApproval) {
+        throw new RuntimeException('No tienes permisos suficientes para realizar esta acción.');
+      }
+
+      $id = $this->get('id');
+      $data = NULL;
+      if ($id == NULL || $id == 'undefined') {
+        $conditions = array('status_approval' => 0);
+        $data = $this->pendingScans->relate()->getWhere($conditions);
+      } else {
+        $data = $this->pendingScans->relate()->find($id);
+        if ($data === NULL || intval($data->status_approval) !== 0) {
+          throw new RuntimeException('No se ha encontrado el scan solicitado.');
+        }
+      }
+
+      if ($data !== NULL) {
+        $this->set_response($data, REST_Controller::HTTP_OK);
+      } else {
+        $response = [
+          'status' => FALSE,
+          'message' => 'No se encontró ningun scan pendiente.',
+        ];
+        $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+      }
+    } catch (Exception $e) {
+      $response = [
+        'status' => FALSE,
+        'message' => $e->getMessage(),
+      ];
+      $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+    }
+  }
+
   /**
 	 * POST: index
    * Crea un nuevo Scan, pero esta se almacena en
@@ -99,10 +155,10 @@ class Scan extends REST_Controller {
       if (isset($data->creationDate)) {
         $scan->creation_date = $data->creationDate->year . "-" . $data->creationDate->month . "-" . $data->creationDate->day;
       }
-      $scan->description = (isset($data->description)) ? intval($data->description) : NULL;
+      $scan->description = (isset($data->description)) ? $data->description : NULL;
       $scan->website = (isset($data->website)) ? $data->website : NULL;
-      $scan->twitter = (isset($data->twitter)) ? intval($data->twitter) : NULL;
-      $scan->facebook = (isset($data->facebook)) ? intval($data->facebook) : NULL;
+      $scan->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
+      $scan->facebook = (isset($data->facebook)) ? $data->facebook : NULL;
       $scan->created = date("Y-m-d H:i:s");
       $scan->updated = date("Y-m-d H:i:s");
 
@@ -133,7 +189,7 @@ class Scan extends REST_Controller {
     }
   }
 
-  public function aprobar_scan_get() {
+  public function update_pending_scan_get() {
 
     $this->load->model('scans/pendingScans', 'pendingScans');
 
@@ -174,15 +230,30 @@ class Scan extends REST_Controller {
         throw new RuntimeException('No se ha encontrado el Scan solicitado.');
       }
 
+      // Comprueba si es aprobado o rechazado
+      $isApproved = ($this->get('status') === 'true');
+      $reason = $this->get('reason');
+      if (! $isApproved) {
+        // Actualizar el estado de la serie de pending_serie a rechazado [-1]
+        $row = array('status_approval' => -1, 'status_reason' => $reason);
+        $this->pendingScans->update($id, $row);
+
+        $response = [
+          'status' => TRUE,
+          'message' => 'Scan rechazado con éxito.',
+        ];
+        $this->response($response, REST_Controller::HTTP_OK);
+      }
+
       $scan = new \stdClass;
       $scan->name = $data->name;
       $scan->stub = $data->stub;
       $scan->uniqid = $data->uniqid;
       $scan->creation_date = $data->creation_date;
-      $scan->description = (isset($data->description)) ? intval($data->description) : NULL;
+      $scan->description = (isset($data->description)) ? $data->description : NULL;
       $scan->website = (isset($data->website)) ? $data->website : NULL;
-      $scan->twitter = (isset($data->twitter)) ? intval($data->twitter) : NULL;
-      $scan->facebook = (isset($data->facebook)) ? intval($data->facebook) : NULL;
+      $scan->twitter = (isset($data->twitter)) ? $data->twitter : NULL;
+      $scan->facebook = (isset($data->facebook)) ? $data->facebook : NULL;
       $scan->created = $data->created;
       $scan->updated = date("Y-m-d H:i:s");
 

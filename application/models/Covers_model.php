@@ -256,6 +256,99 @@ class Covers_model extends MY_Model {
 	}
 
 	/**
+	* Método de subida de la portada, en caso de que ya exista una; se elimina
+	* busca y crea un directorio en caso de que no exista, copia la portada original
+	* a ese directorio, luego crea un 'thumb' de diferentes tamaños [large, medium y thumb]
+	*
+	* @return array con las 4 portadas.
+	* @author dvaJi
+	*/
+	public function MoveCoverAndCreateThumbsUpdate($data, $type, $idname, $cover) {
+
+		$oldDir = "content/pending_". $type . "/" . $data->stub . "_" . $data->uniqid;
+		$newDir = "content/". $type . "/" . $data->stub . "_" . $data->uniqid;
+
+		// Mover el directorio de pending a su directorio correspondiente mediante $type
+		if (!rename($oldDir, $newDir)) {
+        if (copy ($oldDir, $newDir)) {
+            unlink($oldDir);
+        }
+    }
+
+		$dir = $newDir . "/";
+
+		// Revisar si el archivo es en realidad una imagen
+		if (!$imagedata = @getimagesize($dir . $cover)) {
+			throw new RuntimeException("¡No es una imagen!");
+		}
+
+		$this->load->library('image_lib');
+		// Array con los distintos tamaños que se requieren
+		$image_sizes = array(
+			'thumb' => array(240, 300),
+			'medium' => array(300, 560),
+			'large' => array(600, 800)
+		);
+		foreach ($image_sizes as $key => $resize) {
+
+			$config = array(
+				'source_image' => $dir . $cover,
+				'new_image' => $dir . $key . "_" . $cover,
+				'maintain_ration' => true,
+				'quality' => 100,
+				'width' => $resize[0],
+				'height' => $resize[1]
+			);
+
+			$this->image_lib->initialize($config);
+			if (!$this->image_lib->resize()) {
+				return false;
+			}
+			$this->image_lib->clear();
+		}
+
+		//Resize original
+		if ($imagedata["1"] > 1200) {
+			$config = array(
+				'source_image' => $dir . $cover,
+				'new_image' => $dir . $cover,
+				'maintain_ration' => true,
+				'overwrite' => true,
+				'quality' => 100,
+				'width' => 884,
+				'height' => 1200
+			);
+
+			$this->image_lib->initialize($config);
+			if (!$this->image_lib->resize()) {
+				return false;
+			}
+			$this->image_lib->clear();
+		}
+
+		// Ahora se crea el array con las portadas.
+		$coversArray = array();
+		for ($i = 1; $i < 5; $i++) {
+			$coverObj = [
+				{$idname} => $data->id,
+				filename => $this->getTypeCovers($i) . (($i != 1)? "_":"") . $cover,
+		    def => 1,
+				type => $i,
+				adult => 0,
+				height => ($i === 1) ? $imagedata["1"] : $image_sizes[$this->getTypeCovers($i)][0],
+				width => ($i === 1) ? $imagedata["0"] : $image_sizes[$this->getTypeCovers($i)][1],
+				mime => image_type_to_mime_type($imagedata["2"]),
+				size => filesize($dir . $coverObj->filename),
+				updated => date("Y-m-d H:i:s");
+			];
+
+			array_push($coversArray, $coverObj);
+		}
+
+		return $coversArray;
+	}
+
+	/**
 	* Subida de portada original, este redimensiona la imagen en caso de que
 	* la imagen sobre pase los 1200px de altura, y se almacena en pending_{$type}
 	*

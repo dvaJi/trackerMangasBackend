@@ -21,4 +21,19 @@ class PendingStaff extends MY_Model {
 		));
 	}
 
+	/*
+	 * Obtiene los nombres alternativos del staff.
+	 *
+	 * @autor dvaJi
+	*/
+	public function getDefaultName($names) {
+		foreach ($names as $key => $value) {
+			if ($value->def == 1) {
+				return $value->name;
+			}
+		}
+
+		return null;
+	}
+
 }

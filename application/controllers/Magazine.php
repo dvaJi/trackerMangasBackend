@@ -61,6 +61,62 @@ class Magazine extends REST_Controller {
     }
   }
 
+  public function pending_get() {
+    try {
+      $this->load->model('magazines/pendingMagazines', 'pendingMagazines');
+
+      if(!Authorization::tokenIsExist($this->headers)) {
+        throw new RuntimeException('Token not found.');
+      }
+
+      // Obtener el token para validar y obtener el usuario.
+      $token = Authorization::getBearerToken();
+      $token = Authorization::validateToken($token);
+
+      $user_groups = $this->ion_auth->get_users_groups($token->id)->result();
+
+      // Validar de que el usuario tenga los provilegios para aprobar.
+      $canApproval = FALSE;
+      foreach ($user_groups as $key => $group) {
+        if ($group->name == 'admin') {
+          $canApproval = TRUE;
+        }
+      }
+
+      if (! $canApproval) {
+        throw new RuntimeException('No tienes permisos suficientes para realizar esta acción.');
+      }
+
+      $id = $this->get('id');
+      $data = NULL;
+      if ($id == NULL || $id == 'undefined') {
+        $conditions = array('status_approval' => 0);
+        $data = $this->pendingMagazines->relate()->getWhere($conditions);
+      } else {
+        $data = $this->pendingMagazines->relate()->find($id);
+        if ($data === NULL || intval($data->status_approval) !== 0) {
+          throw new RuntimeException('No se ha encontrado el staff solicitado.');
+        }
+      }
+
+      if ($data !== NULL) {
+        $this->set_response($data, REST_Controller::HTTP_OK);
+      } else {
+        $response = [
+          'status' => FALSE,
+          'message' => 'No se encontró ninguna revista pendiente.',
+        ];
+        $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+      }
+    } catch (Exception $e) {
+      $response = [
+        'status' => FALSE,
+        'message' => $e->getMessage(),
+      ];
+      $this->response($response, REST_Controller::HTTP_BAD_REQUEST);
+    }
+  }
+
   /**
 	 * POST: index
    * Crea una nueva revista, pero esta se almacena en
@@ -135,7 +191,7 @@ class Magazine extends REST_Controller {
     }
   }
 
-  public function aprobar_magazine_get() {
+  public function update_pending_magazine_get() {
     try {
 
       $this->load->model('magazines/pendingMagazines', 'pendingMagazines');
@@ -171,6 +227,21 @@ class Magazine extends REST_Controller {
 
       if ($data === NULL || intval($data->status_approval) !== 0) {
         throw new RuntimeException('No se ha encontrado la revista solicitada.');
+      }
+
+      // Comprueba si es aprobado o rechazado
+      $isApproved = ($this->get('status') === 'true');
+      $reason = $this->get('reason');
+      if (! $isApproved) {
+        // Actualizar el estado de la serie de pending_serie a rechazado [-1]
+        $row = array('status_approval' => -1, 'status_reason' => $reason);
+        $this->pendingMagazines->update($id, $row);
+
+        $response = [
+          'status' => TRUE,
+          'message' => 'Revista rechazada con éxito.',
+        ];
+        $this->response($response, REST_Controller::HTTP_OK);
       }
 
       $magazine = new \stdClass;

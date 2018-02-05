@@ -17,7 +17,17 @@ class Genre extends REST_Controller {
   }
 
   public function list_get() {
+    $idSerie = $this->get('id_serie');
+    $serieGenres = $this->genres->getGenresBySerie($idSerie);
     $genres = $this->genres->order_by('name', 'ASC')->getAll();
+    foreach ($genres as $key => $genre) {
+      $genre->checked = FALSE;
+      foreach ($serieGenres as $key => $serieGenre) {
+        if ($genre->id === $serieGenre->id) {
+          $genre->checked = TRUE;
+        }
+      }
+    }
     if ($genres) {
       header('X-TOTAL-ROWS: ' . $this->genres->countAll());
       $this->response($genres, REST_Controller::HTTP_OK);
